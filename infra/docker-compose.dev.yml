@@ -1,0 +1,11 @@
+# =============================================================================
+#  Surcharge "lundi" : MQTT en clair sur 1883 (avec identifiants), avant TLS.
+#  Activée via COMPOSE_FILE dans .env. À SUPPRIMER de COMPOSE_FILE dès que
+#  l'ESP publie en 8883 (tâche mo2) : 1883 doit alors être fermé.
+# =============================================================================
+services:
+  mosquitto:
+    ports:
+      - "1883:1883"
+    volumes:
+      - ./mosquitto/mosquitto.dev.conf:/mosquitto/config/mosquitto.conf:ro

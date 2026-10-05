@@ -1,0 +1,41 @@
+# ---- Secrets : ne JAMAIS commiter ----
+.env
+*.env
+!.env.example
+infra/mosquitto/passwd
+firmware/include/secrets.h
+firmware/include/ca_cert.h
+security/certs/*
+!security/certs/.gitkeep
+*.key
+*.pem
+*.p12
+*.pfx
+
+# ---- Modèles et médias lourds (stockés hors dépôt) ----
+ai/vision/models/*
+!ai/vision/models/.gitkeep
+ai/anomaly/models/*
+!ai/anomaly/models/.gitkeep
+*.pt
+*.onnx
+*.mp4
+*.mov
+*.mkv
+
+# ---- Builds et dépendances ----
+node_modules/
+dashboard/dist/
+.pio/
+build/
+__pycache__/
+*.pyc
+.venv/
+venv/
+.ipynb_checkpoints/
+
+# ---- Système / éditeurs ----
+.DS_Store
+Thumbs.db
+*.log
+.idea/

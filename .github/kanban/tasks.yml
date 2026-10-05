@@ -1,0 +1,1061 @@
+# Sentinel-X — tâches du plan d'équipe (source unique du Kanban)
+# Généré depuis le plan d'équipe. Lu par tools/bootstrap_github.py pour créer les issues.
+# Pour ajouter une tâche en cours de semaine : utiliser plutôt le formulaire d'issue « Tâche ».
+jalons:
+- titre: Lundi
+  description: 'En groupe, maintenant — Tout le monde ensemble. Objectif : décisions prises et schémas prêts pour
+    la validation coach.'
+- titre: Mardi
+  description: 'Production — Objectif du soir : une vraie mesure de l’ESP affichée sur le dashboard servi par le
+    Pi, décision go / no-go sur le Pi, boîtier en impression.'
+- titre: Mercredi
+  description: Intégration globale — Tous les blocs reliés. Captures d’écran pour la vidéo avant midi.
+- titre: Jeudi
+  description: Gel du code, pentest et rendus — Code gelé le matin. Pentest l’après-midi. Tous les livrables numériques
+    déposés le soir.
+- titre: Vendredi
+  description: Soutenance — Prototype déposé au myDiL le matin, passage de 10 minutes chrono.
+labels:
+- nom: iot
+  couleur: 1D76DB
+  description: 'Edge Node : ESP8266, capteurs, câblage'
+- nom: ia
+  couleur: 5319E7
+  description: Vision et anomalies
+- nom: infra
+  couleur: 0E8A16
+  description: Raspberry Pi, Docker, base de données
+- nom: reseau
+  couleur: 006B75
+  description: Point d'accès, plan IP
+- nom: api
+  couleur: FBCA04
+  description: API, intégration backend
+- nom: dashboard
+  couleur: C5DEF5
+  description: Interface web
+- nom: cyber
+  couleur: B60205
+  description: PKI, TLS, hardening, audit, pentest
+- nom: fablab
+  couleur: D4C5F9
+  description: Boîtier, impression, gravure
+- nom: video
+  couleur: F9D0C4
+  description: Teaser Sentinel Drop
+- nom: docs
+  couleur: BFD4F2
+  description: Dossier, schémas, présentation
+- nom: orga
+  couleur: EDEDED
+  description: Organisation, synchros, décisions
+- nom: bloquant
+  couleur: D93F0B
+  description: Bloque d'autres tâches
+- nom: bug
+  couleur: D73A4A
+  description: Problème constaté
+taches:
+- id: g1
+  titre: Valider la répartition des rôles
+  jour: Lundi
+  creneau: Lundi 11h15 – 12h30
+  duree: 10 min
+  bloquant: true
+  brique: orga
+  assignes: &id001
+  - Constantin
+  - Jeffrick
+  - Momo
+  - Lisa
+  - Michel
+  tous: true
+  pilote: null
+  labels:
+  - orga
+  - bloquant
+  detail:
+  - Relire les rôles ci-dessus et ajuster si quelqu’un a une contrainte ou une envie forte.
+  - 'Rappel : chaque point de fragilité a un binôme désigné.'
+  fini_quand: Chacun connaît son rôle et ses binômes.
+  fait: true
+- id: g2
+  titre: Acter l’Option A et organiser le plan de repli
+  jour: Lundi
+  creneau: Lundi 11h15 – 12h30
+  duree: 10 min
+  bloquant: true
+  brique: infra
+  assignes: *id001
+  tous: true
+  pilote: null
+  labels:
+  - infra
+  - bloquant
+  detail:
+  - 'Option A : Raspberry Pi 5 (4 Go) dans le boîtier, webcam USB branchée dessus, ESP8266 connecté en Wi-Fi au
+    Pi qui fait point d’accès.'
+  - 'Vérifier le matériel fourni : Pi 5, carte microSD 32 Go minimum (classe A2), alimentation officielle 27 W (5
+    V / 5 A), ventilateur actif (Active Cooler), câble Ethernet.'
+  - 'Désigner un laptop Linux de repli : la même stack doit pouvoir y tourner si le Pi bloque.'
+  - Noter la justification (produit autonome, cohérence avec le boîtier) et les risques identifiés pour la présentation.
+  fini_quand: Matériel Pi vérifié, laptop de repli désigné, justification écrite.
+  fait: true
+- id: g3
+  titre: Questions aux coachs
+  jour: Lundi
+  creneau: Lundi 11h15 – 12h30
+  duree: 10 min
+  bloquant: false
+  brique: orga
+  assignes:
+  - Constantin
+  tous: false
+  pilote: Constantin
+  labels:
+  - orga
+  detail:
+  - Format imposé de POST /api/v1/alerts ? Qui l’appelle ?
+  - Règles du pentest (Wi-Fi, DoS autorisés ?), plage IP de la table, accès Internet.
+  - Possibilité d’aide ponctuelle en embarqué et réseau, vu les trous de la matrice.
+  - Réservations Fablab et fond vert, heure exacte du rendu jeudi.
+  fini_quand: Réponses notées dans le dépôt (docs/coachs.md).
+  fait: false
+- id: g4
+  titre: Schéma d’architecture et des flux
+  jour: Lundi
+  creneau: Lundi 11h15 – 12h30
+  duree: 30 min
+  bloquant: true
+  brique: docs
+  assignes: *id001
+  tous: true
+  pilote: Constantin
+  labels:
+  - docs
+  - bloquant
+  detail:
+  - 'draw.io ou Excalidraw : ESP8266 et capteurs, point d’accès, Mosquitto, API, BDD, dashboard, script vision,
+    service anomalies, webcam.'
+  - 'Flèches avec protocole et port : MQTTS 8883, HTTPS 443, WebSocket, MJPEG, POST /api/v1/alerts.'
+  - 'Export PNG/SVG dans docs/ : il servira au dossier, aux slides et à la vidéo.'
+  fini_quand: Schéma exporté dans docs/architecture.png.
+  fait: false
+- id: g5
+  titre: Contrat d’interface
+  jour: Lundi
+  creneau: Lundi 11h15 – 12h30
+  duree: 30 min
+  bloquant: true
+  brique: docs
+  assignes:
+  - Constantin
+  - Momo
+  - Jeffrick
+  tous: false
+  pilote: Constantin
+  labels:
+  - docs
+  - bloquant
+  detail:
+  - 'Topics : sentinel/<id>/telemetry, sentinel/<id>/state, sentinel/<id>/cmd.'
+  - 'JSON télémétrie : device_id, temp, hum, gas_raw, pir, rssi, uptime, ts. JSON alerte : device_id, source, type,
+    severity, value, ts, details.'
+  - 'Endpoints : POST /api/v1/alerts, GET /api/v1/telemetry?from=, POST /api/v1/commands, GET /api/v1/health, flux
+    /video.'
+  - IP du Pi, ports et nom d’hôte (ex. sentinel-pi) fixés avec Michel.
+  fini_quand: docs/contracts.md commité et annoncé au groupe.
+  fait: false
+- id: g6
+  titre: Plan IP et Wi-Fi de table
+  jour: Lundi
+  creneau: Lundi 11h15 – 12h30
+  duree: 20 min
+  bloquant: true
+  brique: reseau
+  assignes:
+  - Michel
+  - Lisa
+  tous: false
+  pilote: Michel
+  labels:
+  - reseau
+  - bloquant
+  detail:
+  - 'Sous-réseau dédié (ex. 192.168.10.0/24 selon la plage donnée par les coachs) : Raspberry Pi en .1 (passerelle
+    et serveur), ESP .10 réservé par MAC, DHCP .100–.120 pour les postes admin.'
+  - 2,4 GHz WPA2-AES, canal 1, 6 ou 11 différent des voisins, passphrase de 20 caractères minimum (Lisa).
+  - 'Ports ouverts : 22 (admin), 443, 8883. Rien d’autre.'
+  - 'Le Wi-Fi du Pi sert de point d’accès : son accès Internet passe par l’Ethernet (prise de la salle ou partage
+    depuis un laptop).'
+  fini_quand: Tableau dans docs/reseau.md.
+  fait: false
+- id: g7
+  titre: Dépôt Git, Kanban et conventions
+  jour: Lundi
+  creneau: Lundi 11h15 – 12h30
+  duree: 15 min
+  bloquant: false
+  brique: orga
+  assignes:
+  - Constantin
+  tous: false
+  pilote: Constantin
+  labels:
+  - orga
+  detail:
+  - Arborescence firmware/, api/, dashboard/, ai/, infra/, security/, docs/, tools/.
+  - .gitignore dès le premier commit (.env, secrets.h, certs/, *.key), .env.example, convention de commits feat/fix/docs(scope).
+  - Ajouter les 5 membres, créer le Kanban avec les tâches de ce plan.
+  - 'Rappel : chacun commite lui-même, régulièrement (note individuelle).'
+  fini_quand: Tout le monde a cloné et fait un premier commit.
+  fait: false
+- id: g8
+  titre: Validation des schémas par un coach
+  jour: Lundi
+  creneau: Lundi 11h15 – 12h30
+  duree: 15 min
+  bloquant: true
+  brique: orga
+  assignes: *id001
+  tous: true
+  pilote: null
+  labels:
+  - orga
+  - bloquant
+  detail:
+  - Présenter architecture, plan IP, contrat d’interface, Option A et plan de repli.
+  - Corriger dans la foulée, photo de la version validée.
+  fini_quand: Validation obtenue.
+  fait: false
+- id: p1
+  titre: Installer et préparer le Raspberry Pi 5
+  jour: Lundi
+  creneau: Lundi 13h30 – 17h30
+  duree: 1 h
+  bloquant: true
+  brique: infra
+  assignes:
+  - Michel
+  - Constantin
+  tous: false
+  pilote: Michel
+  labels:
+  - infra
+  - bloquant
+  detail:
+  - 'Raspberry Pi Imager : Raspberry Pi OS Lite 64 bits (sans bureau, pour garder la RAM), nom d’hôte sentinel-pi,
+    utilisateur dédié, SSH activé avec clé publique uniquement, pas de mot de passe.'
+  - Premier démarrage en Ethernet, sudo apt update && sudo apt full-upgrade, puis installation de Docker (script
+    officiel get.docker.com) et du plugin compose.
+  - Ventilateur actif monté, vérifier la température avec vcgencmd measure_temp et l’absence de bridage avec vcgencmd
+    get_throttled (doit renvoyer 0x0).
+  - 'Michel exécute, Constantin accompagne : c’est la montée en compétence Linux de l’équipe.'
+  fini_quand: SSH par clé fonctionne depuis deux laptops, docker run hello-world passe, get_throttled = 0x0.
+  fait: false
+- id: c1
+  titre: Stack Docker minimale sur le Raspberry Pi
+  jour: Lundi
+  creneau: Lundi 13h30 – 17h30
+  duree: 1 h 30
+  bloquant: true
+  brique: infra
+  assignes:
+  - Constantin
+  tous: false
+  pilote: Constantin
+  labels:
+  - infra
+  - bloquant
+  detail:
+  - 'Après l’installation du Pi (tâche avec Michel) : vérifier que chaque image existe en arm64 (eclipse-mosquitto,
+    postgres:16-alpine, nginx:alpine, python:3.12-slim, node:20-alpine le font).'
+  - 'docker-compose.yml : Mosquitto (1883, authentification, pas d’anonyme) et PostgreSQL. Volumes nommés, restart:
+    unless-stopped, healthchecks, BDD non exposée, limites mémoire.'
+  - Le même compose doit tourner tel quel sur le laptop de repli (aucun chemin ni architecture codés en dur).
+  - TLS ajouté mardi avec les certificats de Lisa.
+  fini_quand: mosquitto_pub/sub fonctionne avec identifiants depuis un laptop connecté au Wi-Fi du Pi.
+  fait: false
+- id: c2
+  titre: API squelette
+  jour: Lundi
+  creneau: Lundi 13h30 – 17h30
+  duree: 2 h
+  bloquant: true
+  brique: api
+  assignes:
+  - Constantin
+  tous: false
+  pilote: Constantin
+  labels:
+  - api
+  - bloquant
+  detail:
+  - POST /api/v1/alerts avec validation stricte du schéma (pydantic ou zod), GET /api/v1/health.
+  - Client MQTT abonné à sentinel/+/telemetry, diffusion WebSocket vers le front.
+  - Tester avec le simulateur de Jeffrick.
+  fini_quand: Une donnée simulée publiée sur MQTT arrive en WebSocket.
+  fait: false
+- id: c3
+  titre: Passation MQTT serveur à Lisa
+  jour: Lundi
+  creneau: Lundi 13h30 – 17h30
+  duree: 45 min
+  bloquant: false
+  brique: infra
+  assignes:
+  - Constantin
+  tous: false
+  pilote: Constantin
+  labels:
+  - infra
+  detail:
+  - Montrer le client MQTT de l’API, les topics et comment tester avec mosquitto_sub.
+  - 'Objectif : que Lisa puisse configurer les ACL sans casser le flux.'
+  fini_quand: Lisa sait lancer et lire un abonnement MQTT seule.
+  fait: false
+- id: j1
+  titre: Simulateur d’ESP
+  jour: Lundi
+  creneau: Lundi 13h30 – 17h30
+  duree: 45 min
+  bloquant: true
+  brique: ia
+  assignes:
+  - Jeffrick
+  tous: false
+  pilote: Jeffrick
+  labels:
+  - ia
+  - bloquant
+  detail:
+  - 'tools/simulator.py (paho-mqtt) : télémétrie au format du contrat toutes les 2 s, bruit, dérive lente, pics.'
+  - Option --scenario pour injecter une montée lente de température et une micro-dérive du gaz.
+  - Débloque Constantin et sert de jeu de données synthétique.
+  fini_quand: Constantin reçoit les données simulées dans l’API.
+  fait: false
+- id: j2
+  titre: Passation YOLO et mesure de latence sur le Pi
+  jour: Lundi
+  creneau: Lundi 13h30 – 17h30
+  duree: 1 h 30
+  bloquant: true
+  brique: ia
+  assignes:
+  - Jeffrick
+  - Momo
+  tous: false
+  pilote: Jeffrick
+  labels:
+  - ia
+  - bloquant
+  detail:
+  - Momo montre ultralytics à Jeffrick (30 min), puis Momo repart sur l’ESP.
+  - 'Sur le Pi : capture 640×480, model(frame, classes=[0]) en PyTorch, mesure ms par image sur 200 images. Attendu
+    : bien au-dessus de 100 ms.'
+  - Exporter en NCNN (model.export(format='ncnn')), recharger le modèle exporté et remesurer. Si besoin, imgsz=320.
+  - 'Noter chaque mesure dans un tableau (format, taille, ms, FPS) : c’est une preuve d’optimisation à montrer au
+    jury.'
+  fini_quand: Meilleure latence mesurée sur le Pi et notée, configuration retenue.
+  fait: false
+- id: j3
+  titre: Prototype du modèle d’anomalies
+  jour: Lundi
+  creneau: Lundi 13h30 – 17h30
+  duree: 1 h 30
+  bloquant: false
+  brique: ia
+  assignes:
+  - Jeffrick
+  tous: false
+  pilote: Jeffrick
+  labels:
+  - ia
+  detail:
+  - 'Fenêtres glissantes de 30 à 60 s : moyenne, écart-type, pente, corrélation temp-gaz, z-score.'
+  - IsolationForest entraîné sur des données normales simulées, score continu.
+  - 'Notebook ai/anomaly/ : deviendra la section IA du dossier.'
+  fini_quand: Le score monte nettement sur le scénario simulé avant tout seuil brut.
+  fait: false
+- id: m1
+  titre: Câblage et test de chaque composant
+  jour: Lundi
+  creneau: Lundi 13h30 – 17h30
+  duree: 2 h
+  bloquant: true
+  brique: iot
+  assignes:
+  - Momo
+  - Michel
+  tous: false
+  pilote: Momo
+  labels:
+  - iot
+  - bloquant
+  detail:
+  - 'Michel câble selon le schéma, Momo programme : PlatformIO (ou Arduino IDE), blink, DHT22 (2 s minimum, millis()),
+    OLED sur D1/D2, PIR, buzzer, LEDs.'
+  - MQ-2 en 5 V via pont diviseur vers A0, branché et alimenté tout de suite pour le préchauffage.
+  - Éviter D3, D4, D8 pour le PIR et le buzzer.
+  - 'Bibliothèques : DHT sensor library, Adafruit SSD1306, PubSubClient.'
+  fini_quand: Chaque capteur affiche une valeur cohérente sur le moniteur série et sur l’OLED.
+  fait: false
+- id: m2
+  titre: ESP connecté en Wi-Fi et MQTT en clair
+  jour: Lundi
+  creneau: Lundi 13h30 – 17h30
+  duree: 1 h
+  bloquant: false
+  brique: iot
+  assignes:
+  - Momo
+  tous: false
+  pilote: Momo
+  labels:
+  - iot
+  detail:
+  - Connexion au point d’accès de Michel, publication de la télémétrie JSON du contrat sur 1883 avec identifiants.
+  - Identifiants dans include/secrets.h ignoré par Git, secrets.example.h versionné.
+  fini_quand: Constantin voit les vraies valeurs dans mosquitto_sub.
+  fait: false
+- id: l1
+  titre: CA locale et certificats
+  jour: Lundi
+  creneau: Lundi 13h30 – 17h30
+  duree: 1 h 30
+  bloquant: true
+  brique: cyber
+  assignes:
+  - Lisa
+  tous: false
+  pilote: Lisa
+  labels:
+  - cyber
+  - bloquant
+  detail:
+  - 'Script openssl versionné (sans les clés) : CA, certificat serveur ECDSA P-256 avec l’IP du serveur dans le
+    SAN.'
+  - Tester la chaîne avec mosquitto_sub --cafile depuis un PC avant d’impliquer l’ESP.
+  - Installer chrony sur le serveur comme source NTP locale (l’ESP vérifie la date des certificats).
+  fini_quand: Certificats générés, chaîne testée, NTP local actif.
+  fait: false
+- id: l2
+  titre: Matrice de sécurité et base pentest
+  jour: Lundi
+  creneau: Lundi 13h30 – 17h30
+  duree: 1 h
+  bloquant: false
+  brique: cyber
+  assignes:
+  - Lisa
+  tous: false
+  pilote: Lisa
+  labels:
+  - cyber
+  detail:
+  - 'Pour chaque surface (Wi-Fi, MQTT, API, SSH, Docker, firmware, dépôt) : menace, contre-mesure, preuve prévue.'
+  - Scan Nmap de référence du serveur (avant hardening) conservé.
+  - Règles d’engagement du pentest notées, gitleaks installé sur le dépôt.
+  fini_quand: docs/securite.md commité, scan de référence sauvegardé.
+  fait: false
+- id: mi1
+  titre: Point d’accès Wi-Fi de table
+  jour: Lundi
+  creneau: Lundi 13h30 – 17h30
+  duree: 1 h
+  bloquant: true
+  brique: reseau
+  assignes:
+  - Michel
+  tous: false
+  pilote: Michel
+  labels:
+  - reseau
+  - bloquant
+  detail:
+  - 'Sur le Pi : nmcli dev wifi hotspot ifname wlan0 (2,4 GHz, WPA2, canal choisi), puis connexion rendue persistante
+    au redémarrage (autoconnect).'
+  - Réservation DHCP de l’ESP par adresse MAC et IP fixe du Pi (.1).
+  - Internet du Pi par Ethernet pour les installations.
+  - Tester avec un téléphone, puis avec l’ESP de Momo.
+  fini_quand: L’ESP obtient son IP réservée et pingue le serveur.
+  fait: false
+- id: mi2
+  titre: Mesures et esquisse du boîtier
+  jour: Lundi
+  creneau: Lundi 13h30 – 17h30
+  duree: 1 h
+  bloquant: false
+  brique: fablab
+  assignes:
+  - Michel
+  tous: false
+  pilote: Michel
+  labels:
+  - fablab
+  detail:
+  - Pied à coulisse sur Pi 5 avec son ventilateur, ESP, OLED, dôme PIR, MQ-2, DHT22, breadboard ou plaque.
+  - 'Tutoriel Fusion 360 « boîte avec couvercle » (30 min), puis esquisse : compartiment Pi isolé des capteurs,
+    fenêtre OLED, ouverture PIR, aérations séparées (le Pi et le MQ-2 chauffent, le DHT22 doit rester loin d’eux).'
+  - Prévoir l’accès aux ports USB (webcam), à l’alimentation USB-C et à l’Ethernet, et des entretoises M2.5 pour
+    fixer le Pi.
+  - Réserver un créneau d’impression mardi midi.
+  fini_quand: Esquisse cotée dans Fusion 360, créneau réservé.
+  fait: false
+- id: g9
+  titre: Synchro de 17h
+  jour: Lundi
+  creneau: Lundi 13h30 – 17h30
+  duree: 30 min
+  bloquant: false
+  brique: orga
+  assignes: *id001
+  tous: true
+  pilote: null
+  labels:
+  - orga
+  detail:
+  - Chacun montre ce qui tourne réellement.
+  - Mise à jour du Kanban et des risques, push Git de tout le monde.
+  fini_quand: Objectifs de mardi confirmés.
+  fait: false
+- id: c4
+  titre: Mosquitto en TLS 8883 avec ACL
+  jour: Mardi
+  creneau: Mardi
+  duree: 2 h
+  bloquant: true
+  brique: cyber
+  assignes:
+  - Constantin
+  - Lisa
+  tous: false
+  pilote: Constantin
+  labels:
+  - cyber
+  - bloquant
+  detail:
+  - Listener 8883 avec les certificats de Lisa, password_file, acl_file (l’ESP publie seulement sa télémétrie et
+    s’abonne seulement à ses commandes), allow_anonymous false.
+  - Persistance et rotation des logs.
+  - Fermer 1883 dès que l’ESP passe en TLS.
+  fini_quand: mosquitto_sub en 8883 avec CA fonctionne, un client anonyme est refusé.
+  fait: false
+- id: c5
+  titre: Persistance et historique
+  jour: Mardi
+  creneau: Mardi
+  duree: 2 h
+  bloquant: true
+  brique: api
+  assignes:
+  - Constantin
+  - Jeffrick
+  tous: false
+  pilote: Constantin
+  labels:
+  - api
+  - bloquant
+  detail:
+  - 'Schéma BDD (Jeffrick) : telemetry, alerts, commands. Écriture par l’API, GET historique paginé.'
+  - Enregistrement continu des vraies données capteurs pour l’entraînement IA.
+  fini_quand: Les données de la journée sont en BDD et relisibles.
+  fait: false
+- id: c6
+  titre: Dashboard v1
+  jour: Mardi
+  creneau: Mardi
+  duree: 3 h
+  bloquant: true
+  brique: dashboard
+  assignes:
+  - Constantin
+  tous: false
+  pilote: Constantin
+  labels:
+  - dashboard
+  - bloquant
+  detail:
+  - Courbes live température, humidité, gaz (composant graphique de Jeffrick si besoin), statut du boîtier, journal
+    des alertes.
+  - Boutons buzzer et LEDs → POST /api/v1/commands → MQTT cmd.
+  - Emplacement du flux vidéo /video. Grosses polices et contrastes forts pour la démo et Teams.
+  fini_quand: Une commande depuis le dashboard fait sonner le buzzer.
+  fait: false
+- id: p2
+  titre: Budget de ressources du Pi
+  jour: Mardi
+  creneau: Mardi
+  duree: 45 min
+  bloquant: false
+  brique: infra
+  assignes:
+  - Constantin
+  - Jeffrick
+  tous: false
+  pilote: Constantin
+  labels:
+  - infra
+  detail:
+  - Mesurer la RAM et le CPU avec toute la stack lancée (docker stats, htop) pendant que YOLO tourne.
+  - Limites dans le compose (mem_limit / deploy.resources) pour qu’aucun service ne fasse tomber les autres. PostgreSQL
+    avec shared_buffers réduit, pas d’InfluxDB ni de Grafana.
+  - Dashboard compilé sur un laptop (npm run build) et servi en fichiers statiques par nginx sur le Pi, pas de serveur
+    de développement Node sur le Pi.
+  - 'Surveiller la température : au-delà de 80 °C, le Pi se bride et la latence YOLO explose.'
+  fini_quand: Stack complète plus YOLO sous 3 Go de RAM, pas de bridage thermique après 30 min.
+  fait: false
+- id: mo1
+  titre: Firmware v1 complet en clair
+  jour: Mardi
+  creneau: Mardi
+  duree: 3 h
+  bloquant: true
+  brique: iot
+  assignes:
+  - Momo
+  tous: false
+  pilote: Momo
+  labels:
+  - iot
+  - bloquant
+  detail:
+  - Télémétrie toutes les 2 s, publication d’état sur changement (PIR, seuil de sécurité matériel), abonnement aux
+    commandes buzzer et LEDs.
+  - 'OLED : IP, état Wi-Fi et MQTT, dernière mesure.'
+  - Reconnexion automatique Wi-Fi et MQTT, boucle non bloquante.
+  fini_quand: 'Débrancher puis rebrancher le Wi-Fi : l’ESP se reconnecte seul.'
+  fait: false
+- id: mo2
+  titre: Passage du firmware en TLS
+  jour: Mardi
+  creneau: Mardi
+  duree: 2 h
+  bloquant: true
+  brique: iot
+  assignes:
+  - Momo
+  - Lisa
+  tous: false
+  pilote: Momo
+  labels:
+  - iot
+  - bloquant
+  detail:
+  - BearSSL::WiFiClientSecure avec la CA embarquée, heure via le NTP local du serveur, port 8883.
+  - 'Si la mémoire bloque : certificat ECDSA, setBufferSizes, ou en dernier recours pinning d’empreinte (à documenter).'
+  - Faire en premier sur une copie du firmware qui marche.
+  fini_quand: Télémétrie reçue en 8883, 1883 fermé.
+  fait: false
+- id: je1
+  titre: Script vision v1
+  jour: Mardi
+  creneau: Mardi
+  duree: 3 h
+  bloquant: true
+  brique: ia
+  assignes:
+  - Jeffrick
+  tous: false
+  pilote: Jeffrick
+  labels:
+  - ia
+  - bloquant
+  detail:
+  - YOLO person, zone interdite (polygone), temps de présence, latence et FPS en surimpression.
+  - Flux MJPEG annoté servi par FastAPI sur /video.
+  - POST /api/v1/alerts au changement d’état uniquement, avec délai minimal entre deux alertes.
+  fini_quand: 'Une personne entre dans la zone : alerte dans le dashboard, flux visible.'
+  fait: false
+- id: je2
+  titre: Collecte et provocation d’anomalies réelles
+  jour: Mardi
+  creneau: Mardi
+  duree: 1 h
+  bloquant: false
+  brique: ia
+  assignes:
+  - Jeffrick
+  tous: false
+  pilote: Jeffrick
+  labels:
+  - ia
+  detail:
+  - Régime normal enregistré plusieurs heures.
+  - 'Scénarios notés avec horodatage : sèche-cheveux ou main près du DHT22, gel hydroalcoolique près du MQ-2. Pas
+    de flamme.'
+  fini_quand: Jeu de données réel étiqueté exporté en CSV.
+  fait: false
+- id: li1
+  titre: Script de hardening
+  jour: Mardi
+  creneau: Mardi
+  duree: 2 h
+  bloquant: false
+  brique: cyber
+  assignes:
+  - Lisa
+  tous: false
+  pilote: Lisa
+  labels:
+  - cyber
+  detail:
+  - 'Sur le Pi : UFW deny par défaut, n’autoriser que 22 (depuis le sous-réseau admin), 443 et 8883.'
+  - 'sshd : PasswordAuthentication no, PermitRootLogin no, clés ed25519 (déjà en place grâce à l’installation).'
+  - 'Compose : utilisateurs non root, no-new-privileges, pas de socket Docker monté.'
+  - 'Attention : Docker contourne UFW pour les ports publiés. Ne publier que les ports nécessaires et le vérifier
+    au Nmap.'
+  - Appliquer en fin de journée seulement, après accord de Constantin.
+  fini_quand: Script testé, Nmap après hardening sauvegardé.
+  fait: false
+- id: li2
+  titre: Sécurité de l’API
+  jour: Mardi
+  creneau: Mardi
+  duree: 1 h
+  bloquant: false
+  brique: cyber
+  assignes:
+  - Lisa
+  - Constantin
+  tous: false
+  pilote: Lisa
+  labels:
+  - cyber
+  detail:
+  - Clé d’API ou JWT sur les commandes et l’ingestion, limitation de débit, HTTPS via le reverse proxy.
+  - 'Tests : payload invalide rejeté, appel sans clé refusé.'
+  fini_quand: Les deux tests passent.
+  fait: false
+- id: mi3
+  titre: Boîtier finalisé et impression lancée
+  jour: Mardi
+  creneau: Mardi
+  duree: 3 h
+  bloquant: true
+  brique: fablab
+  assignes:
+  - Michel
+  tous: false
+  pilote: Michel
+  labels:
+  - fablab
+  - bloquant
+  detail:
+  - Finaliser dans Fusion 360 (jeu 0,3 à 0,5 mm), exporter en STL, lancer l’impression au créneau réservé.
+  - 'Boîtier plus grand avec le Pi : vérifier le temps d’impression annoncé par le slicer et découper en deux pièces
+    si besoin.'
+  - Faire relire les cotes par Momo avant l’impression.
+  fini_quand: Impression lancée mardi midi au plus tard.
+  fait: false
+- id: mi4
+  titre: Logo, numéro de série et storyboard
+  jour: Mardi
+  creneau: Mardi
+  duree: 1 h 30
+  bloquant: false
+  brique: video
+  assignes:
+  - Michel
+  - Constantin
+  tous: false
+  pilote: Michel
+  labels:
+  - video
+  detail:
+  - 'Constantin : storyboard 9:16 calé sur la structure imposée (hook 0–10 s, boîtier 10–30 s, incrustation 30–50
+    s, outro 50–60 s) et liste des plans.'
+  - 'Michel : logo AetherCorp vectoriel (SVG), numéro de série, consignes de sécurité pour la gravure.'
+  - Réserver la salle fond vert et le laser.
+  fini_quand: Storyboard et fichiers de gravure dans docs/.
+  fait: false
+- id: p3
+  titre: Décision go / no-go sur le Pi
+  jour: Mardi
+  creneau: Mardi
+  duree: 15 min
+  bloquant: true
+  brique: orga
+  assignes: *id001
+  tous: true
+  pilote: null
+  labels:
+  - orga
+  - bloquant
+  detail:
+  - 'Critères : latence YOLO mesurée sous 100 ms (ou proche avec imgsz réduit), RAM suffisante, pas de bridage,
+    ESP connecté au point d’accès du Pi.'
+  - 'Si un critère échoue sans solution en vue : bascule sur le laptop de repli, le boîtier garde la place du Pi
+    pour la version suivante.'
+  - 'Décision notée avec ses mesures : c’est un excellent argument à présenter au jury.'
+  fini_quand: Décision prise et documentée mardi 18h.
+  fait: false
+- id: g10
+  titre: Point de contrôle de mardi soir
+  jour: Mardi
+  creneau: Mardi
+  duree: 30 min
+  bloquant: true
+  brique: orga
+  assignes: *id001
+  tous: true
+  pilote: null
+  labels:
+  - orga
+  - bloquant
+  detail:
+  - 'Vraie valeur de l’ESP visible sur le dashboard ? Si non : on coupe des fonctionnalités et tout le monde aide
+    à l’intégration mercredi matin.'
+  - Push Git de tout le monde.
+  fini_quand: Flux de bout en bout démontré.
+  fait: false
+- id: c7
+  titre: Intégration globale
+  jour: Mercredi
+  creneau: Mercredi matin
+  duree: 3 h
+  bloquant: true
+  brique: api
+  assignes: *id001
+  tous: true
+  pilote: Constantin
+  labels:
+  - api
+  - bloquant
+  detail:
+  - ESP en TLS → Mosquitto → API → BDD → WebSocket → dashboard, avec vision et anomalies branchées.
+  - Tests de démo en conditions réelles, liste des bugs dans le Kanban.
+  - Endpoint /health avec CPU, RAM, disque, température du Pi et messages par seconde (psutil, vcgencmd) affiché
+    dans le dashboard (MCO).
+  fini_quand: Scénario de démo complet joué sans intervention.
+  fait: false
+- id: je3
+  titre: Service d’anomalies en production
+  jour: Mercredi
+  creneau: Mercredi matin
+  duree: 2 h
+  bloquant: true
+  brique: ia
+  assignes:
+  - Jeffrick
+  tous: false
+  pilote: Jeffrick
+  labels:
+  - ia
+  - bloquant
+  detail:
+  - Modèle entraîné sur les données réelles, service abonné à MQTT, score publié et alerte envoyée sur l’API.
+  - Courbe du score dans le dashboard. Fusion PIR + vision pour une alerte confirmée.
+  fini_quand: Le score monte avant l’alerte brute sur un scénario provoqué.
+  fait: false
+- id: mo3
+  titre: Intégration dans le boîtier et test longue durée
+  jour: Mercredi
+  creneau: Mercredi matin
+  duree: 2 h
+  bloquant: false
+  brique: iot
+  assignes:
+  - Momo
+  - Michel
+  tous: false
+  pilote: Momo
+  labels:
+  - iot
+  detail:
+  - Monter le Pi et l’électronique dans le boîtier, passe-câbles propres, aérations dégagées, ventilateur du Pi
+    non obstrué.
+  - 'Laisser tourner une heure boîtier fermé : vérifier reconnexions et température du Pi.'
+  fini_quand: Une heure sans perte de connexion.
+  fait: false
+- id: g11
+  titre: Captures pour la vidéo
+  jour: Mercredi
+  creneau: Mercredi matin
+  duree: 30 min
+  bloquant: false
+  brique: video
+  assignes:
+  - Constantin
+  tous: false
+  pilote: Constantin
+  labels:
+  - video
+  detail:
+  - 'Enregistrer avec OBS : dashboard en action, YOLO qui encadre un intrus, code qui défile, logs Docker.'
+  - À faire avant midi pour l’incrustation.
+  fini_quand: Clips dans le dossier partagé.
+  fait: false
+- id: g12
+  titre: Tournage fond vert
+  jour: Mercredi
+  creneau: Mercredi après-midi et soir
+  duree: 2 h
+  bloquant: true
+  brique: video
+  assignes: *id001
+  tous: true
+  pilote: null
+  labels:
+  - video
+  - bloquant
+  detail:
+  - Selon le storyboard, plans du boîtier en gros plan, outro de l’équipe face caméra.
+  - Pas de vêtements verts, fond éclairé de façon uniforme.
+  fini_quand: Tous les plans du storyboard tournés.
+  fait: false
+- id: li3
+  titre: Montage de la vidéo
+  jour: Mercredi
+  creneau: Mercredi après-midi et soir
+  duree: 3 h
+  bloquant: true
+  brique: video
+  assignes:
+  - Lisa
+  - Michel
+  tous: false
+  pilote: Lisa
+  labels:
+  - video
+  - bloquant
+  detail:
+  - 'CapCut (plus simple) ou DaVinci Resolve : détourage, incrustation des captures, musique libre de droits.'
+  - Export 1080×1920, H.264, MP4, 59 s maximum, nommé selon la consigne.
+  fini_quand: Workshop2026-M1-G<n>-VidDrop.mp4 validé par le groupe.
+  fait: false
+- id: li4
+  titre: Preuves de sécurité
+  jour: Mercredi
+  creneau: Mercredi après-midi et soir
+  duree: 1 h 30
+  bloquant: false
+  brique: cyber
+  assignes:
+  - Lisa
+  tous: false
+  pilote: Lisa
+  labels:
+  - cyber
+  detail:
+  - Capture Wireshark 1883 en clair contre 8883 chiffré, Nmap avant et après hardening.
+  - Préparer la checklist d’attaque du pentest et le modèle de rapport d’audit.
+  fini_quand: Captures dans docs/preuves/, modèle de rapport prêt.
+  fait: false
+- id: mi5
+  titre: Gravure laser
+  jour: Mercredi
+  creneau: Mercredi après-midi et soir
+  duree: 1 h
+  bloquant: false
+  brique: fablab
+  assignes:
+  - Michel
+  tous: false
+  pilote: Michel
+  labels:
+  - fablab
+  detail:
+  - Logo, numéro de série et consignes de sécurité gravés sur la façade.
+  fini_quand: Façade gravée et montée.
+  fait: false
+- id: g13
+  titre: Gel du code et répétition de démo
+  jour: Jeudi
+  creneau: Jeudi
+  duree: matin
+  bloquant: true
+  brique: orga
+  assignes: *id001
+  tous: true
+  pilote: null
+  labels:
+  - orga
+  - bloquant
+  detail:
+  - Dernier merge, tag Git v1.0, plus aucune fonctionnalité nouvelle.
+  - Démo répétée deux fois, vidéo de secours enregistrée.
+  - Sauvegarde de la config, des certificats et du firmware pour pouvoir tout restaurer après le pentest.
+  fini_quand: Tag v1.0 posé, sauvegarde faite.
+  fait: false
+- id: li5
+  titre: Pentest croisé et rapport d’audit
+  jour: Jeudi
+  creneau: Jeudi
+  duree: après-midi
+  bloquant: true
+  brique: cyber
+  assignes:
+  - Lisa
+  - Constantin
+  tous: false
+  pilote: Lisa
+  labels:
+  - cyber
+  - bloquant
+  detail:
+  - 'Attaque des autres tables dans le cadre fixé : reconnaissance, MQTT anonyme, API sans authentification, DoS
+    applicatif.'
+  - Surveillance de notre serveur pendant les attaques subies.
+  - 'Rapport : vulnérabilités, preuves, sévérités, recommandations, attaques subies et résistance.'
+  fini_quand: Rapport intégré au dossier.
+  fait: false
+- id: je4
+  titre: Présentation et pitch
+  jour: Jeudi
+  creneau: Jeudi
+  duree: 3 h
+  bloquant: true
+  brique: docs
+  assignes:
+  - Jeffrick
+  - Constantin
+  tous: false
+  pilote: Jeffrick
+  labels:
+  - docs
+  - bloquant
+  detail:
+  - 'PPTX calé sur le chrono : équipe et Option A (1 min), vidéo (1 min), démo (3 min), pitch et Q&A (5 min).'
+  - 'Réponses préparées : pourquoi Isolation Forest, preuve du TLS, pourquoi le Pi et comment la latence YOLO a
+    été optimisée (NCNN), comportement si le Wi-Fi tombe.'
+  fini_quand: Workshop2026-M1-G<n>-Pres.pptx prêt, répété une fois.
+  fait: false
+- id: li6
+  titre: Dossier PDF et rendus
+  jour: Jeudi
+  creneau: Jeudi
+  duree: soir
+  bloquant: true
+  brique: docs
+  assignes: *id001
+  tous: true
+  pilote: Lisa
+  labels:
+  - docs
+  - bloquant
+  detail:
+  - 'Chacun fournit sa section : réseau (Michel), câblage (Momo), sécurité et audit (Lisa), IA (Jeffrick), architecture
+    (Constantin). Poster A3 en annexe (Momo).'
+  - README exhaustif, gitleaks passé, zip du dépôt. Tous les fichiers nommés selon la consigne.
+  fini_quand: Dossier, PPTX, vidéo et zip déposés avant l’échéance.
+  fait: false
+- id: v1
+  titre: Dépôt du prototype et soutenance
+  jour: Vendredi
+  creneau: Vendredi
+  duree: matin
+  bloquant: true
+  brique: orga
+  assignes: *id001
+  tous: true
+  pilote: null
+  labels:
+  - orga
+  - bloquant
+  detail:
+  - Prototype déposé au myDiL, boîtier allumé 10 minutes avant le passage (préchauffage du MQ-2, démarrage des conteneurs
+    sur le Pi).
+  - Simulateur prêt en secours si l’ESP flanche.
+  fini_quand: Passage de 10 minutes tenu.
+  fait: false

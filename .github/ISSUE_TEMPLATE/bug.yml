@@ -1,0 +1,28 @@
+name: Bug
+description: Un problème constaté pendant les tests ou l'intégration
+labels: [bug]
+body:
+  - type: dropdown
+    id: brique
+    attributes:
+      label: Brique concernée
+      options: [iot, ia, infra, reseau, api, dashboard, cyber]
+    validations:
+      required: true
+  - type: textarea
+    id: constat
+    attributes:
+      label: Constat et étapes pour reproduire
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Journaux (docker compose logs <service>, moniteur série...)
+      render: text
+  - type: checkboxes
+    id: demo
+    attributes:
+      label: Impact
+      options:
+        - label: Bloque la démo

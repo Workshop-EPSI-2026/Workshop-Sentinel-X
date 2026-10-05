@@ -1,0 +1,23 @@
+# Sentinel-X — ACL Mosquitto (contrat : docs/contracts.md)
+# Principe du moindre privilège : chaque compte ne voit que ce dont il a besoin.
+# Ajouter un bloc par boîtier supplémentaire (esp-02, ...).
+
+# --- Boîtier 1 : publie sa télémétrie et son état, lit uniquement ses commandes
+user esp-01
+topic write sentinel/esp-01/telemetry
+topic write sentinel/esp-01/state
+topic read  sentinel/esp-01/cmd
+
+# --- API : lit tous les boîtiers, envoie les commandes
+user api
+topic read  sentinel/+/telemetry
+topic read  sentinel/+/state
+topic write sentinel/+/cmd
+
+# --- Service d'anomalies : lecture seule de la télémétrie
+user anomaly
+topic read  sentinel/+/telemetry
+
+# --- Compte de test / supervision (mosquitto_sub) : lecture seule
+user monitor
+topic read  sentinel/#

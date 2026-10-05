@@ -1,0 +1,23 @@
+# Équipe Sentinel-X — renseigner le champ "github" de chacun AVANT de lancer
+# tools/bootstrap_github.py. Tout le reste vient du plan d'équipe validé lundi.
+membres:
+  - prenom: Constantin
+    github: A_RENSEIGNER
+    role: "Lead intégration · Backend · Stack Docker sur le Pi · Dashboard"
+    binomes: [Lisa, Jeffrick]
+  - prenom: Jeffrick
+    github: A_RENSEIGNER
+    role: "Lead IA et data · Anomalies · Vision · BDD · Pitch"
+    binomes: [Momo]
+  - prenom: Momo
+    github: A_RENSEIGNER
+    role: "Lead embarqué · Firmware ESP8266 · Câblage"
+    binomes: [Michel, Lisa]
+  - prenom: Lisa
+    github: A_RENSEIGNER
+    role: "Lead cybersécurité · PKI · Hardening · Audit · Dossier"
+    binomes: [Constantin, Michel]
+  - prenom: Michel
+    github: A_RENSEIGNER
+    role: "Raspberry Pi et réseau de table · Matériel · Fablab · Vidéo"
+    binomes: [Momo, Constantin, Lisa]

@@ -1,0 +1,43 @@
+name: Tâche
+description: Nouvelle tâche du plan Sentinel-X
+title: "[id] Titre court"
+labels: []
+body:
+  - type: dropdown
+    id: brique
+    attributes:
+      label: Brique
+      options: [iot, ia, infra, reseau, api, dashboard, cyber, fablab, video, docs, orga]
+    validations:
+      required: true
+  - type: dropdown
+    id: jour
+    attributes:
+      label: Jour
+      options: [Lundi, Mardi, Mercredi, Jeudi, Vendredi]
+    validations:
+      required: true
+  - type: input
+    id: binome
+    attributes:
+      label: Binôme
+      placeholder: "ex. Lisa"
+  - type: textarea
+    id: detail
+    attributes:
+      label: Ce qu'il faut faire
+    validations:
+      required: true
+  - type: textarea
+    id: dod
+    attributes:
+      label: Fini quand
+      description: Critère vérifiable — la tâche n'est fermée que s'il est atteint.
+    validations:
+      required: true
+  - type: checkboxes
+    id: bloquant
+    attributes:
+      label: Dépendances
+      options:
+        - label: Cette tâche bloque d'autres tâches

@@ -1,0 +1,6 @@
+ultralytics>=8.3,<9
+ncnn>=1.0.20240410
+opencv-python-headless>=4.10,<5
+fastapi>=0.115,<1
+uvicorn[standard]>=0.30,<1
+httpx>=0.27,<1

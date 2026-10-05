@@ -1,0 +1,101 @@
+# Sentinel-X — intégration continue : rapide, sans secret, adaptée à un projet d'une semaine.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  secrets:
+    name: Aucun secret dans le dépôt (gitleaks)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: gitleaks
+        run: |
+          docker run --rm -v "$PWD:/repo" zricethezav/gitleaks:latest \
+            detect --source /repo --redact --verbose --exit-code 1
+
+  compose:
+    name: docker-compose valide
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Vérifier la composition (tous profils)
+        working-directory: infra
+        run: |
+          cp .env.example .env
+          docker compose --profile app --profile ai config --quiet
+          docker compose -f docker-compose.yml -f docker-compose.dev.yml config --quiet
+      - name: Aucun port publié en dehors de 443 et 8883
+        working-directory: infra
+        run: |
+          cp .env.example .env
+          PORTS=$(docker compose -f docker-compose.yml --profile app --profile ai config --format json \
+            | jq -r '.services[].ports[]?.published' | sort -u | tr '\n' ' ')
+          echo "Ports publiés : $PORTS"
+          for p in $PORTS; do
+            case "$p" in 443|8883) ;; *) echo "::error::Port $p publié : interdit (Docker contourne UFW)"; exit 1;; esac
+          done
+
+  python:
+    name: Python (lint)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install ruff
+      - name: ruff (erreurs bloquantes uniquement)
+        run: ruff check --select E9,F63,F7,F82 api ai tools
+
+  firmware:
+    name: Firmware ESP8266 (compilation)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - id: check
+        run: echo "present=$([ -f firmware/platformio.ini ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+      - if: steps.check.outputs.present == 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - if: steps.check.outputs.present == 'true'
+        name: Compiler
+        run: |
+          pip install platformio
+          cp firmware/include/secrets.example.h firmware/include/secrets.h
+          [ -f firmware/include/ca_cert.h ] || echo 'static const char CA_CERT[] PROGMEM = "";' > firmware/include/ca_cert.h
+          pio run -d firmware
+      - if: steps.check.outputs.present != 'true'
+        run: 'echo "Pas encore de firmware/platformio.ini, étape ignorée."'
+
+  dashboard:
+    name: Dashboard (build)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - id: check
+        run: echo "present=$([ -f dashboard/package.json ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+      - if: steps.check.outputs.present == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - if: steps.check.outputs.present == 'true'
+        working-directory: dashboard
+        run: |
+          if [ -f package-lock.json ]; then npm ci; else npm install; fi
+          npm run build
+      - if: steps.check.outputs.present != 'true'
+        run: 'echo "Pas encore de dashboard/package.json, étape ignorée."'
