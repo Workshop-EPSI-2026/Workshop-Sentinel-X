@@ -13,6 +13,9 @@ Usage (depuis la racine du dépôt) :
   python3 tools/bootstrap_github.py                    # crée tout
   python3 tools/bootstrap_github.py --assign-only      # plus tard : assigne les issues
                                                        # aux membres ayant accepté l'invitation
+  python3 tools/bootstrap_github.py --sync             # après modification de tasks.yml : met à jour
+                                                       # titres, contenus, labels, jalons ; crée les
+                                                       # nouvelles tâches et les ajoute au Kanban
 Options : --owner <compte ou organisation>  --name <nom du dépôt>  --public  --no-project
 """
 import argparse, json, pathlib, subprocess, sys
@@ -59,6 +62,7 @@ def main():
     ap.add_argument("--public", action="store_true", help="dépôt public (défaut : privé)")
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--assign-only", action="store_true")
+    ap.add_argument("--sync", action="store_true", help="mettre à jour les issues existantes depuis tasks.yml")
     ap.add_argument("--no-project", action="store_true", help="ne pas créer le Kanban GitHub Projects")
     a = ap.parse_args()
     DRY = a.dry_run
@@ -81,6 +85,9 @@ def main():
 
     if a.assign_only:
         assign_existing(repo, plan, handles)
+        return
+    if a.sync:
+        sync(repo, owner, plan, handles, not a.no_project)
         return
 
     # 1. CODEOWNERS --------------------------------------------------------
@@ -217,6 +224,56 @@ def assign_existing(repo, plan, handles):
         who = ",".join(handles[p] for p in t["assignes"])
         r = run(["gh", "issue", "edit", str(i["number"]), "-R", repo, "--add-assignee", who], check=False)
         print(f"  #{i['number']} [{t['id']}] -> {who} {'' if r is not None or DRY else '(échec)'}")
+
+
+def sync(repo, owner, plan, handles, with_project):
+    step("Labels et jalons")
+    for l in plan["labels"]:
+        run(["gh", "label", "create", l["nom"], "-R", repo, "--color", l["couleur"],
+             "--description", l["description"], "--force"], check=False)
+    have = set((run(["gh", "api", f"repos/{repo}/milestones?state=all", "--jq", ".[].title"],
+                    check=False, quiet=True) or "").splitlines())
+    for j in plan["jalons"]:
+        if j["titre"] not in have:
+            run(["gh", "api", f"repos/{repo}/milestones", "-f", f"title={j['titre']}",
+                 "-f", f"description={j['description']}"], check=False)
+    step("Issues : mise à jour et nouvelles tâches")
+    existing = issues_by_id(repo)
+    new_urls = []
+    for t in plan["taches"]:
+        title = f"[{t['id']}] {t['titre']}"
+        if t["id"] in existing:
+            cmd = ["gh", "issue", "edit", str(existing[t["id"]]["number"]), "-R", repo,
+                   "--title", title, "--body", body(t), "--milestone", t["jour"]]
+            for l in t["labels"]:
+                cmd += ["--add-label", l]
+            r = run(cmd, check=False)
+            print(f"  mis à jour  {title}" + ("" if r is not None or DRY else "  (échec)"))
+        else:
+            base = ["gh", "issue", "create", "-R", repo, "--title", title, "--body", body(t),
+                    "--milestone", t["jour"]]
+            for l in t["labels"]:
+                base += ["--label", l]
+            url = run(base + ["--assignee", ",".join(handles[p] for p in t["assignes"])], check=False, quiet=True)
+            if url is None and not DRY:
+                url = run(base, check=False)
+            if url:
+                new_urls.append(url)
+            print(f"  créé        {title}")
+    if with_project and new_urls:
+        step("Ajout des nouvelles tâches au Kanban")
+        out = run(["gh", "project", "list", "--owner", owner, "--format", "json"], check=False, quiet=True)
+        num = None
+        for pr in json.loads(out or "{}").get("projects", []):
+            if pr.get("title") == "Sentinel-X — Kanban":
+                num = pr.get("number")
+        if num is None and not DRY:
+            print("  ⚠ Projet « Sentinel-X — Kanban » introuvable : ajouter les nouvelles issues à la main.")
+        else:
+            for u in new_urls:
+                run(["gh", "project", "item-add", str(num or "<n>"), "--owner", owner, "--url", u], check=False, quiet=True)
+            print(f"  {len(new_urls)} carte(s) ajoutée(s)")
+    print("\nSynchronisation terminée.")
 
 
 def body(t):

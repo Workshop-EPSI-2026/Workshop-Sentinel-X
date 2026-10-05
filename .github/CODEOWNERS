@@ -1,24 +1,23 @@
 # Sentinel-X — propriétaires par dossier (relecture demandée automatiquement sur les PR)
-# Les identifiants @gh-<prenom> sont remplacés par les vrais comptes GitHub
-# par tools/bootstrap_github.py (à partir de .github/kanban/team.yml).
 # La dernière règle qui correspond l'emporte.
 
-*                       @gh-constantin
+*                       @Datebayo350
 
-/firmware/              @gh-momo
-/api/                   @gh-constantin @gh-lisa
-/dashboard/             @gh-constantin @gh-jeffrick
-/ai/                    @gh-jeffrick
-/infra/                 @gh-constantin @gh-michel
-/infra/mosquitto/       @gh-constantin @gh-lisa
-/security/              @gh-lisa
-/tools/                 @gh-jeffrick @gh-constantin
+/firmware/              @Momo43-ui
+/config/                @Datebayo350 @tech-200
+/api/                   @Datebayo350 @lisahammani601-del
+/dashboard/             @Datebayo350 @tech-200
+/ai/                    @tech-200
+/infra/                 @Datebayo350 @kokoayimichel-creator
+/infra/mosquitto/       @Datebayo350 @lisahammani601-del
+/security/              @lisahammani601-del
+/tools/                 @tech-200 @Datebayo350
 
-/docs/                  @gh-constantin
-/docs/reseau.md         @gh-michel @gh-lisa
-/docs/cablage.md        @gh-momo @gh-michel
-/docs/securite.md       @gh-lisa
-/docs/fablab/           @gh-michel
-/docs/preuves/          @gh-lisa
+/docs/                  @Datebayo350
+/docs/reseau.md         @kokoayimichel-creator @lisahammani601-del
+/docs/cablage.md        @Momo43-ui @kokoayimichel-creator
+/docs/securite.md       @lisahammani601-del
+/docs/fablab/           @kokoayimichel-creator
+/docs/preuves/          @lisahammani601-del
 
-/.github/               @gh-constantin
+/.github/               @Datebayo350

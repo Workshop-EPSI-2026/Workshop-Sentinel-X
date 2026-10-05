@@ -1,8 +1,8 @@
 # Sentinel-X
 
 > Workshop M1 EPSI 2026 · Mission Sentinel-X pour AetherCorp Industrial Solutions.
-> Boîtier de surveillance autonome : ESP8266 et capteurs, Raspberry Pi 5 embarqué (Option A),
-> IA de vision et de détection d'anomalies, flux chiffrés de bout en bout.
+> Boîtier de surveillance autonome : ESP32-S3 et capteurs, Raspberry Pi 5 embarqué (Option A, Pi 4 en repli),
+> détection multicouche (environnement, intrusion, cyber), flux chiffrés de bout en bout.
 
 ## Équipe
 
@@ -10,45 +10,50 @@
 |---|---|
 | Constantin | Lead intégration · Backend · Stack Docker sur le Pi · Dashboard |
 | Jeffrick | Lead IA et data · Anomalies · Vision · BDD · Pitch |
-| Momo | Lead embarqué · Firmware ESP8266 · Câblage |
+| Momo | Lead embarqué · Firmware ESP32-S3 · Câblage |
 | Lisa | Lead cybersécurité · PKI · Hardening · Audit · Dossier |
 | Michel | Raspberry Pi et réseau de table · Matériel · Fablab · Vidéo |
 
 Répartition détaillée, binômes et charge : [`docs/repartition.md`](docs/repartition.md).
 
-## Architecture
+## Architecture v2
+
+Référence complète : [`docs/architecture.md`](docs/architecture.md).
 
 ```
-ESP8266 + DHT22 / MQ-2 / PIR / OLED
-        │  Wi-Fi WPA2 (point d'accès du Pi) · MQTTS 8883
+ESP32-S3 N16R8 + DHT11 / MQ-2 / PIR / effraction tactile
+   garde locale, alarme réflexe, tampon PSRAM, voyant RGB
+        │  Wi-Fi WPA2 (point d'accès du Pi 5) · MQTTS 8883 (TLS mutuel en cible)
         ▼
-Raspberry Pi 5 (sentinel-pi, 192.168.10.1) — Docker Compose
-  ├─ mosquitto   bus MQTT, TLS, ACL                      [publié : 8883]
-  ├─ api         REST + WebSocket, écrit en base
-  ├─ postgres    historique (réseau interne, jamais exposé)
-  ├─ vision      YOLO (NCNN) sur la webcam USB, flux /video
-  ├─ anomaly     Isolation Forest, score et alertes
-  └─ nginx       HTTPS/WSS + dashboard statique         [publié : 443]
+Raspberry Pi 5 (sentinel-pi, 192.168.10.1) — Docker Compose      Pi 4 (192.168.10.2) : repli + audit
+  ├─ mosquitto   8883 boîtiers [publié] · 8884 services [interne]
+  ├─ api         REST, WebSocket, incidents, profil de site
+  ├─ postgres    historique (réseau interne)
+  ├─ vision      YOLO NCNN, suivi, zone, caméra masquée, /video
+  ├─ anomaly     Sentinel Brain : 4 couches + fusion + score expliqué
+  └─ nginx       HTTPS/WSS + dashboard                         [publié : 443]
 ```
 
-Contrat d'interface (topics, JSON, endpoints) : [`docs/contracts.md`](docs/contracts.md) ·
-Réseau : [`docs/reseau.md`](docs/reseau.md) · Sécurité : [`docs/securite.md`](docs/securite.md).
+Contrat : [`docs/contracts.md`](docs/contracts.md) · Câblage : [`docs/cablage.md`](docs/cablage.md) ·
+Réseau : [`docs/reseau.md`](docs/reseau.md) · Sécurité : [`docs/securite.md`](docs/securite.md) ·
+Profil de site : [`config/site.example.yml`](config/site.example.yml).
 
 ## Arborescence
 
 | Dossier | Contenu | Propriétaire |
 |---|---|---|
-| `firmware/` | Firmware ESP8266 (PlatformIO) | Momo |
+| `firmware/` | Firmware ESP32-S3 (PlatformIO), brochage `pins.h` | Momo |
+| `config/` | Profils de site (personnalisation) | Constantin, Jeffrick |
 | `api/` | API REST + WebSocket | Constantin |
 | `dashboard/` | Interface web (compilée sur laptop) | Constantin |
-| `ai/vision/`, `ai/anomaly/` | Services IA et notebooks | Jeffrick |
+| `ai/vision/`, `ai/anomaly/` | Vision et Sentinel Brain | Jeffrick |
 | `infra/` | `docker-compose.yml`, Mosquitto, nginx, init PostgreSQL | Constantin, Michel |
 | `security/` | PKI (sans clés), hardening, audits | Lisa |
 | `docs/` | Contrat, réseau, câblage, fablab, preuves, dossier | Tous |
 | `tools/` | Création du dépôt, simulateur d'ESP | Constantin, Jeffrick |
 | `.github/` | CI, modèles d'issues et de PR, CODEOWNERS, plan du Kanban | Constantin |
 
-## Démarrer la stack (sur le Pi ou le laptop de repli)
+## Démarrer la stack (sur le Pi 5, ou le Pi 4 de repli)
 
 ```bash
 git clone <url-du-dépôt> sentinel-x && cd sentinel-x/infra
@@ -64,8 +69,9 @@ Progression dans `infra/.env` :
 |---|---|---|---|
 | Lundi | `docker-compose.yml:docker-compose.dev.yml` | `1883` / `false` | *(vide)* |
 | Dès que l'API existe | idem | idem | `app` |
-| Mardi, après les certificats de Lisa | `docker-compose.yml` | `8883` / `true` | `app` |
-| Dès que les services IA existent | `docker-compose.yml` | `8883` / `true` | `app,ai` |
+| Mardi, après les certificats de Lisa | `docker-compose.yml` | `8884` / `true` | `app` |
+| Dès que les services IA existent | `docker-compose.yml` | `8884` / `true` | `app,ai` |
+| TLS mutuel prêt | idem, avec `MOSQUITTO_CONF=mosquitto.mtls.conf` | `8884` / `true` | `app,ai` |
 
 Puis `docker compose up -d --build` à chaque changement.
 
@@ -89,7 +95,7 @@ gh pr create --fill              # ou depuis l'interface GitHub
 
 ## Kanban
 
-Les 49 tâches du plan d'équipe sont décrites dans `.github/kanban/tasks.yml` et deviennent des
+Les tâches du plan d'équipe sont décrites dans `.github/kanban/tasks.yml` et deviennent des
 issues GitHub (une par tâche, avec responsables, jalon du jour, labels de brique et `bloquant`,
 cases à cocher et définition de « fini »). Colonnes : **À faire → En cours → En revue → Terminé**,
 une seule carte « En cours » par personne.
@@ -105,9 +111,11 @@ python3 tools/bootstrap_github.py --dry-run     # vérifier
 python3 tools/bootstrap_github.py               # créer
 # quand tout le monde a accepté l'invitation :
 python3 tools/bootstrap_github.py --assign-only
+# après une mise à jour de tasks.yml (titres, contenus, nouvelles tâches) :
+python3 tools/bootstrap_github.py --sync
 ```
 Le script crée le dépôt privé, pousse ce squelette, invite les 4 autres membres, crée labels,
-jalons, les 49 issues, la protection de `main` et le projet Kanban.
+jalons, les issues, la protection de `main` et le projet Kanban.
 
 **Manuelle** — sur github.com : *New repository* `sentinel-x` (privé, sans README), puis :
 ```bash

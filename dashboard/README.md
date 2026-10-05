@@ -1,8 +1,15 @@
-# Dashboard — responsable : Constantin (binôme graphiques : Jeffrick)
+# Dashboard — Constantin (binôme graphiques et jauge Sentinel Score : Jeffrick)
 
 Compilé **sur un laptop** (`npm run build`), jamais de serveur de développement sur le Pi.
-Le dossier `dist/` produit est servi par nginx (monté en lecture seule) : copier `dist/`
-sur le Pi (`scp -r dist sentinel-pi:~/sentinel-x/dashboard/`) puis rien à redémarrer.
+`dist/` est servi par nginx : `scp -r dist sentinel-pi:~/Workshop-Sentinel-X/dashboard/`.
 
-Appels : `/api/v1/...` en HTTPS, temps réel sur `wss://<pi>/ws`, vidéo sur `/video`
-(même origine, donc pas de CORS à gérer).
+## Vues
+| Vue | Contenu |
+| --- | --- |
+| Supervision | Jauge Sentinel Score (global + environnement / physique / cyber), courbes live, voyant du boîtier, mode |
+| Incidents | Liste par gravité, explication et facteurs, prévision « critique dans N min », acquitter / résoudre |
+| Vision | Flux `/video` annoté, zone, FPS, latence |
+| Système | Santé du Pi et des boîtiers (RSSI, mémoire, tampon, température), état de chaque conteneur |
+| Réglages | Profil de site : sensibilités, seuils, modes et horaires, zone de la caméra (`GET/PUT /api/v1/config`) |
+
+Temps réel par `wss://<pi>/ws`, même origine que l'API (pas de CORS). Grosses polices et forts contrastes pour la salle et Teams.

@@ -6,7 +6,7 @@
 
 ## Checklist « fini »
 - [ ] La définition de fini de l'issue est atteinte
-- [ ] Testé sur la stack commune (Pi ou laptop de repli), pas seulement sur mon poste
+- [ ] Testé sur la stack commune (Pi 5, ou Pi 4 de repli), pas seulement sur mon poste
 - [ ] Respecte `docs/contracts.md` (ou le contrat a été mis à jour et annoncé)
 - [ ] Aucun secret, certificat ou mot de passe dans le diff
 - [ ] Quelques lignes ajoutées au dossier si la tâche le demande

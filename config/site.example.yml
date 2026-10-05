@@ -1,0 +1,62 @@
+# Sentinel-X — profil de site (personnalisation sans toucher au code)
+# Valeurs par défaut chargées au premier démarrage de l'API, puis modifiables depuis la page Réglages.
+# L'API versionne chaque modification et publie le profil en message MQTT conservé :
+#   - partie "device" -> sentinel/<id>/config (boîtiers)
+#   - profil complet  -> sentinel/site/config (Sentinel Brain)
+
+site:
+  name: "Micro-centrale démo EPSI"
+  timezone: "Europe/Paris"
+
+devices:
+  esp-01:
+    label: "Boîtier entrée local technique"
+    sensors: { dht11: true, mq2: true, pir: true, tamper: true }
+    telemetry_period_s: 2          # 1 minimum (limite du DHT11)
+    burst_period_ms: 500           # échantillonnage accéléré en suspicion (gaz)
+    burst_duration_s: 60
+    local_alarm: true              # alarme réflexe sans le serveur
+    buzzer: true
+    tamper_sensitivity: 0.7        # 0..1, appliquée au seuil tactile auto-calibré
+    learning_minutes: 10
+
+modes:
+  default: armed                   # armed | maintenance
+  schedule:                        # plages de surveillance renforcée (vide = toujours)
+    - { days: [mon, tue, wed, thu, fri], from: "19:00", to: "07:00", profile: night }
+    - { days: [sat, sun], from: "00:00", to: "23:59", profile: night }
+
+thresholds:                        # garde-fous absolus, en plus de la détection adaptative
+  temp_c:    { warning: 35, critical: 45 }
+  hum_pct:   { warning: 80, critical: 90 }
+  gas_ratio: { warning: 1.3, critical: 1.8 }
+
+brain:
+  sensitivity:                     # 0 (tolérant) .. 1 (très sensible)
+    environment: 0.6
+    physical: 0.7
+    cyber: 0.8
+  night_profile_boost: 0.15        # sensibilité ajoutée la nuit
+  window_s: 60
+  retrain_every_min: 30            # réentraînement sur fenêtres sans incident
+  forecast_horizon_min: 10
+  correlation_window_s: 5          # PIR + vision = intrusion confirmée
+  loitering_s: 20
+  cooldown_s: 60                   # délai minimal entre deux notifications d'un même incident
+
+vision:
+  enabled: true
+  imgsz: 320
+  confidence: 0.5
+  min_consecutive_frames: 3
+  zone:                            # polygone en coordonnées normalisées (0..1) de l'image
+    - [0.20, 0.25]
+    - [0.80, 0.25]
+    - [0.80, 0.95]
+    - [0.20, 0.95]
+  masking_detection: true
+  low_light_threshold: 35          # luminosité moyenne (0..255) sous laquelle le PIR prend le relais
+
+integrations:
+  webhook_url: ""                  # vide = désactivé ; POST JSON de chaque incident
+  csv_export: true

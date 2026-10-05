@@ -1,26 +1,34 @@
-# Sécurité — responsable : Lisa (binômes : Constantin, Momo)
+# Sécurité — Lisa (binômes : Constantin, Momo, Jeffrick pour la détection cyber)
 
-## Certificats
-Générés dans `security/certs/` (**jamais commité**) par le script de la tâche l1
-(`security/pki/`, versionné **sans** les clés). Fichiers attendus :
+## PKI locale (OpenSSL, ECDSA P-256)
+Script dans `security/pki/` (versionné **sans** aucune clé). Sortie dans `security/certs/` (**jamais commité**).
 
-| Fichier | Utilisé par |
-|---|---|
-| `ca.crt` | API, service d'anomalies, firmware, clients de test |
-| `server.crt` / `server.key` | Mosquitto (8883) et nginx (443) |
+| Fichier | Usage |
+| --- | --- |
+| `ca.crt` / `ca.key` | Autorité locale ; `ca.key` reste sur une clé USB, hors du Pi si possible |
+| `server.crt` / `server.key` | Mosquitto (8883, 8884) et nginx (443) |
+| `esp-01.crt` / `esp-01.key` | Certificat client du boîtier (TLS mutuel), CN = `esp-01` |
+| `monitor.crt` / `monitor.key` | Certificat client des tests (`mosquitto_sub`), CN = `monitor` |
 
-Le certificat serveur doit contenir dans son SAN : `IP:192.168.10.1`, `DNS:sentinel-pi`
-et `DNS:mosquitto` (nom utilisé par les conteneurs à l'intérieur du réseau Docker).
+SAN du certificat serveur : `IP:192.168.10.1`, `IP:192.168.10.2`, `DNS:sentinel-pi`, `DNS:sentinel-pi4`, `DNS:mosquitto`.
+Le CN d'un certificat client devient son nom d'utilisateur MQTT : il doit correspondre à un bloc de `infra/mosquitto/aclfile`.
+Pour le firmware : générer `firmware/include/certs.h` (CA, certificat et clé du boîtier), ignoré par Git.
 
-## Droits sur la clé privée (sur le Pi)
-Les conteneurs Mosquitto et nginx tournent sans root ; ils lisent la clé via un groupe dédié :
+## Droits sur les clés (sur le Pi)
 ```bash
 sudo groupadd -g 2000 sentinel-certs
 sudo chgrp -R 2000 security/certs
-sudo chmod 640 security/certs/server.key
+sudo chmod 640 security/certs/*.key
 sudo chmod 644 security/certs/*.crt
 ```
 
-## Preuves à produire (docs/preuves/)
-Wireshark 1883 en clair vs 8883 chiffré, Nmap avant/après hardening, client anonyme refusé,
-payload invalide rejeté par l'API, appel sans clé refusé, rapport gitleaks.
+## Étapes
+1. CA + certificat serveur + chrony (lundi).
+2. TLS : `MOSQUITTO_CONF=mosquitto.tls.conf`, fermeture de 1883 (mardi).
+3. Certificats clients, puis `MOSQUITTO_CONF=mosquitto.mtls.conf` (mercredi, si le socle est stable).
+4. Durcissement de l'hôte (UFW, sshd, fail2ban), Nmap avant/après.
+5. Signaux cyber vers Sentinel Brain avec Jeffrick (journal Mosquitto, rafales 401/429, rejeu).
+
+## Preuves (docs/preuves/)
+Wireshark 1883 clair contre 8883 chiffré · client sans certificat refusé · Nmap avant/après · payload invalide rejeté ·
+incident cyber généré pendant une attaque · rapport gitleaks.

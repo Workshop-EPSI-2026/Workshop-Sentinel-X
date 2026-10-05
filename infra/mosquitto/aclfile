@@ -1,23 +1,35 @@
-# Sentinel-X — ACL Mosquitto (contrat : docs/contracts.md)
-# Principe du moindre privilège : chaque compte ne voit que ce dont il a besoin.
+# Sentinel-X v2 — ACL Mosquitto (contrat : docs/contracts.md)
+# Moindre privilège. En TLS mutuel, le nom d'utilisateur d'un boîtier = CN de son certificat.
 # Ajouter un bloc par boîtier supplémentaire (esp-02, ...).
 
-# --- Boîtier 1 : publie sa télémétrie et son état, lit uniquement ses commandes
+# --- Boîtier 1
 user esp-01
 topic write sentinel/esp-01/telemetry
-topic write sentinel/esp-01/state
+topic write sentinel/esp-01/event
+topic write sentinel/esp-01/health
+topic write sentinel/esp-01/status
 topic read  sentinel/esp-01/cmd
+topic read  sentinel/esp-01/config
 
-# --- API : lit tous les boîtiers, envoie les commandes
+# --- API : lit tout ce qui vient des boîtiers et de Brain, pilote commandes et configuration
 user api
 topic read  sentinel/+/telemetry
-topic read  sentinel/+/state
+topic read  sentinel/+/event
+topic read  sentinel/+/health
+topic read  sentinel/+/status
+topic read  sentinel/brain/#
 topic write sentinel/+/cmd
+topic write sentinel/+/config
 
-# --- Service d'anomalies : lecture seule de la télémétrie
+# --- Sentinel Brain : lit les boîtiers et le profil de site, publie les scores
 user anomaly
 topic read  sentinel/+/telemetry
+topic read  sentinel/+/event
+topic read  sentinel/+/health
+topic read  sentinel/+/status
+topic read  sentinel/site/config
+topic write sentinel/brain/score
 
-# --- Compte de test / supervision (mosquitto_sub) : lecture seule
+# --- Supervision et tests (mosquitto_sub) : lecture seule
 user monitor
 topic read  sentinel/#

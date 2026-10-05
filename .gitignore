@@ -5,6 +5,7 @@
 infra/mosquitto/passwd
 firmware/include/secrets.h
 firmware/include/ca_cert.h
+firmware/include/certs.h
 security/certs/*
 !security/certs/.gitkeep
 *.key

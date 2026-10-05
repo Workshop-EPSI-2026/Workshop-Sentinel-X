@@ -7,11 +7,11 @@ membres:
     binomes: [Lisa, Jeffrick]
   - prenom: Jeffrick
     github: tech-200
-    role: "Lead IA et data · Anomalies · Vision · BDD · Pitch"
+    role: "Lead IA et data · Sentinel Brain · Vision · BDD · Pitch"
     binomes: [Momo]
   - prenom: Momo
     github: Momo43-ui
-    role: "Lead embarqué · Firmware ESP8266 · Câblage"
+    role: "Lead embarqué · Firmware ESP32-S3 · Câblage"
     binomes: [Michel, Lisa]
   - prenom: Lisa
     github: lisahammani601-del
@@ -19,5 +19,5 @@ membres:
     binomes: [Constantin, Michel]
   - prenom: Michel
     github: kokoayimichel-creator
-    role: "Raspberry Pi et réseau de table · Matériel · Fablab · Vidéo"
+    role: "Raspberry Pi 5 et 4 · Réseau de table · Matériel · Fablab · Vidéo"
     binomes: [Momo, Constantin, Lisa]

@@ -1,6 +1,6 @@
 # =============================================================================
-#  Sentinel-X — Stack serveur (Raspberry Pi 5, Option A)
-#  Le même fichier tourne tel quel sur le laptop Linux de repli (amd64/arm64).
+#  Sentinel-X v2 — Stack serveur (Raspberry Pi 5, Option A)
+#  Le même fichier tourne tel quel sur le Raspberry Pi 4 de repli (arm64).
 #
 #  Démarrage :   cd infra && cp .env.example .env  (puis remplir .env)
 #                docker compose up -d
@@ -8,14 +8,17 @@
 #  Profils (variable COMPOSE_PROFILES dans .env) :
 #    (aucun)   -> mosquitto + postgres          (lundi : socle)
 #    app       -> + api + nginx (dashboard)     (dès que l'API existe)
-#    ai        -> + vision + anomaly            (dès que les scripts IA existent)
+#    ai        -> + vision + anomaly (Sentinel Brain)
+#
+#  MQTT : 8883 = boîtiers (publié), 8884 = services (interne, jamais publié).
+#  Fichier Mosquitto choisi par MOSQUITTO_CONF : tls (mardi) puis mtls (TLS mutuel).
 #
 #  Règles de sécurité appliquées partout :
 #    - seuls 443 (HTTPS/WSS) et 8883 (MQTTS) sont publiés sur l'hôte
 #      (Docker contourne UFW : ne JAMAIS ajouter d'autres "ports:")
 #    - base de données sur un réseau interne, jamais exposée
 #    - conteneurs non root, no-new-privileges, capabilities retirées
-#    - limites mémoire : total visé < 3 Go avec YOLO (Pi 5 4 Go)
+#    - limites mémoire : total visé < 3 Go avec YOLO
 # =============================================================================
 
 name: sentinel-x
@@ -48,15 +51,16 @@ services:
     ports:
       - "8883:8883"                   # MQTTS — seul port MQTT publié
     volumes:
-      - ./mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - ./mosquitto/${MOSQUITTO_CONF:-mosquitto.tls.conf}:/mosquitto/config/mosquitto.conf:ro
       - ./mosquitto/aclfile:/mosquitto/config/aclfile:ro
       - ./mosquitto/passwd:/mosquitto/config/passwd:ro
       - ../security/certs:/mosquitto/certs:ro
       - mosquitto-data:/mosquitto/data
+      - mosquitto-log:/mosquitto/log  # partagé en lecture seule avec Sentinel Brain
     networks:
       - app
     healthcheck:
-      test: ["CMD-SHELL", "nc -z localhost 8883 || nc -z localhost 1883"]
+      test: ["CMD-SHELL", "nc -z localhost 8884 || nc -z localhost 1883"]
       interval: 15s
       timeout: 5s
       retries: 5
@@ -107,14 +111,18 @@ services:
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-sentinel}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-sentinel}
       MQTT_HOST: mosquitto
-      MQTT_PORT: ${MQTT_PORT:-8883}
+      MQTT_PORT: ${MQTT_PORT:-8884}
       MQTT_TLS: ${MQTT_TLS:-true}
       MQTT_CA: /certs/ca.crt
       MQTT_USER: api
       MQTT_PASSWORD: ${MQTT_API_PASSWORD:?définir MQTT_API_PASSWORD dans .env}
       API_KEY: ${API_KEY:?définir API_KEY dans .env}
+      OPERATOR_TOKEN: ${OPERATOR_TOKEN:?définir OPERATOR_TOKEN dans .env}
+      SITE_PROFILE: /config/site.yml
+      WEBHOOK_URL: ${WEBHOOK_URL:-}
     volumes:
       - ../security/certs/ca.crt:/certs/ca.crt:ro
+      - ../config/${SITE_PROFILE_FILE:-site.example.yml}:/config/site.yml:ro   # profil initial
     networks:
       - app
       - data
@@ -177,11 +185,10 @@ services:
       API_URL: http://api:8000
       API_KEY: ${API_KEY}
       MODEL_PATH: /models/${VISION_MODEL:-yolov8n_ncnn_model}
-      IMGSZ: ${VISION_IMGSZ:-320}
-      CONF_THRESHOLD: ${VISION_CONF:-0.5}
-      ALERT_COOLDOWN_S: ${VISION_COOLDOWN:-10}
+      SITE_PROFILE: /config/site.yml   # zone, confiance, luminosité (mise à jour via l'API)
     volumes:
       - ../ai/vision/models:/models:ro
+      - ../config/${SITE_PROFILE_FILE:-site.example.yml}:/config/site.yml:ro
     networks:
       - app
     depends_on:
@@ -195,7 +202,7 @@ services:
     mem_limit: 1536m
     cpus: 3.0
 
-  # --------------------------------------------------------- IA anomalies ---
+  # ------------------------------------------- Sentinel Brain (détection) ---
   anomaly:
     <<: *hardening
     profiles: ["ai"]
@@ -207,17 +214,21 @@ services:
       - /tmp
     environment:
       MQTT_HOST: mosquitto
-      MQTT_PORT: ${MQTT_PORT:-8883}
+      MQTT_PORT: ${MQTT_PORT:-8884}
       MQTT_TLS: ${MQTT_TLS:-true}
       MQTT_CA: /certs/ca.crt
       MQTT_USER: anomaly
       MQTT_PASSWORD: ${MQTT_ANOMALY_PASSWORD:?définir MQTT_ANOMALY_PASSWORD dans .env}
       API_URL: http://api:8000
       API_KEY: ${API_KEY}
-      MODEL_PATH: /models/iforest.joblib
+      MODEL_DIR: /models
+      SITE_PROFILE: /config/site.yml
+      MOSQUITTO_LOG: /mosquitto-log/mosquitto.log   # accès refusés -> signaux cyber
     volumes:
       - ../security/certs/ca.crt:/certs/ca.crt:ro
-      - ../ai/anomaly/models:/models:ro
+      - ../config/${SITE_PROFILE_FILE:-site.example.yml}:/config/site.yml:ro
+      - mosquitto-log:/mosquitto-log:ro
+      - brain-models:/models          # modèles réentraînés en continu (persistants)
     networks:
       - app
     depends_on:
@@ -225,7 +236,7 @@ services:
         condition: service_healthy
       api:
         condition: service_started
-    mem_limit: 384m
+    mem_limit: 512m
 
 networks:
   app:                                # services applicatifs
@@ -234,4 +245,6 @@ networks:
 
 volumes:
   mosquitto-data:
+  mosquitto-log:
   pg-data:
+  brain-models:

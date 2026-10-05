@@ -8,6 +8,7 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install -r requirements.txt
 COPY . .
+RUN mkdir -p /models && chown 10001 /models
 # Utilisateur non root
 RUN useradd --uid 10001 --no-create-home --shell /usr/sbin/nologin app
 USER 10001

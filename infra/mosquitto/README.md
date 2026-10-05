@@ -2,8 +2,9 @@
 
 | Fichier | Rôle | Versionné |
 |---|---|---|
-| `mosquitto.conf` | Production : TLS 8883 uniquement | oui |
 | `mosquitto.dev.conf` | Lundi : 1883 en clair, authentifié | oui |
+| `mosquitto.tls.conf` | Mardi : TLS sur 8883 (boîtiers) et 8884 (services) | oui |
+| `mosquitto.mtls.conf` | Cible : TLS mutuel sur 8883, certificat par boîtier | oui |
 | `aclfile` | Droits par compte (moindre privilège) | oui |
 | `passwd` | Comptes et mots de passe hachés | **non** (`.gitignore`) |
 
@@ -27,8 +28,16 @@ celui d'`esp-01` à celui de `firmware/include/secrets.h`.
 ```bash
 # Lundi (1883)
 mosquitto_sub -h 192.168.10.1 -p 1883 -u monitor -P 'MDP_MONITOR' -t 'sentinel/#' -v
-# Dès mardi (8883)
+# Dès mardi (8883, boîtiers ; les tests se font sur ce port depuis un laptop)
 mosquitto_sub -h 192.168.10.1 -p 8883 --cafile security/certs/ca.crt -u monitor -P 'MDP_MONITOR' -t 'sentinel/#' -v
 # Preuve : un client anonyme doit être refusé
 mosquitto_sub -h 192.168.10.1 -p 8883 --cafile security/certs/ca.crt -t '#'
+```
+
+## Choisir la configuration
+Dans `infra/.env` : `MOSQUITTO_CONF=mosquitto.tls.conf` puis `mosquitto.mtls.conf`, puis `docker compose up -d`.
+En TLS mutuel, un test depuis un laptop exige un certificat client :
+```bash
+mosquitto_sub -h 192.168.10.1 -p 8883 --cafile security/certs/ca.crt \
+  --cert security/certs/monitor.crt --key security/certs/monitor.key -t 'sentinel/#' -v
 ```
