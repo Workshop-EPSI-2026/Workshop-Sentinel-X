@@ -1,0 +1,11 @@
+{
+  "files.eol": "\n",
+  "files.insertFinalNewline": true,
+  "files.trimTrailingWhitespace": true,
+  "python.terminal.activateEnvironment": true,
+  "python.analysis.extraPaths": ["api", "ai/anomaly", "ai/vision", "tools"],
+  "[python]": { "editor.defaultFormatter": "charliermarsh.ruff" },
+  "yaml.schemas": {
+    "https://raw.githubusercontent.com/compose-spec/compose-spec/master/schema/compose-spec.json": "infra/docker-compose*.yml"
+  }
+}

@@ -1,0 +1,10 @@
+# Environnement de développement commun des postes (Python 3.12).
+# Source des versions : ce fichier + les requirements.in des services.
+# Ne pas modifier requirements-dev.txt à la main : il est généré (voir VERSIONS.md).
+-r tools/requirements.in
+-r api/requirements.in
+-r ai/anomaly/requirements.in
+jupyterlab>=4.2,<5
+matplotlib>=3.9,<4
+ruff>=0.6
+packaging>=24

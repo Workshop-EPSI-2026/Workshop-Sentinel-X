@@ -460,7 +460,7 @@ taches:
   - cyber
   detail:
   - 'Remplir docs/securite.md v2 : Wi-Fi, MQTT, API, SSH, Docker, boîtier, caméra, dépôt.'
-  - Scan Nmap de référence du Pi 5 (avant hardening) conservé.
+  - 'Scan Nmap de référence du Pi 5 (avant hardening) conservé ; outils d’audit prévus : Nmap, Wireshark, Metasploit.'
   - Règles d’engagement du pentest notées, gitleaks vérifié sur le dépôt.
   fini_quand: docs/securite.md commité, scan de référence sauvegardé.
   fait: false
@@ -946,7 +946,8 @@ taches:
   - cyber
   detail:
   - Wireshark 1883 clair contre 8883 chiffré, client sans certificat refusé, Nmap avant et après hardening.
-  - Préparer la checklist d’attaque du pentest et le modèle de rapport d’audit.
+  - Installer Metasploit sur la station d’audit (Pi 4 ou laptop) et préparer la checklist d’attaque (modules à essayer)
+    et le modèle de rapport.
   fini_quand: Captures dans docs/preuves/, modèle de rapport prêt.
   fait: false
 - id: mi5
@@ -1087,10 +1088,13 @@ taches:
   - cyber
   - bloquant
   detail:
-  - 'Attaque des autres tables dans le cadre fixé, depuis le Pi 4 comme station d’audit : reconnaissance, MQTT anonyme,
-    API sans authentification, DoS applicatif.'
+  - 'Attaque des autres tables dans le cadre fixé, depuis le Pi 4 comme station d’audit : reconnaissance Nmap, inspection
+    Wireshark, et au moins une tentative documentée avec Metasploit (ex. module auxiliaire scanner/mqtt ou scanner
+    de ports, ou vérification d’un service exposé).'
+  - MQTT anonyme et API sans authentification ; DoS applicatif si autorisé par les coachs.
   - 'Surveillance de notre serveur : les attaques subies doivent apparaître en incidents cyber dans le dashboard.'
-  - 'Rapport : vulnérabilités, preuves, sévérités, recommandations, attaques subies et résistance.'
+  - 'Rapport : outils utilisés (Nmap, Wireshark, Metasploit), vulnérabilités, preuves, sévérités, recommandations,
+    attaques subies et résistance.'
   fini_quand: Rapport intégré au dossier.
   fait: false
 - id: je4

@@ -1,0 +1,4 @@
+# Installer AVANT requirements.txt, depuis l'index CPU de PyTorch :
+#   pip install -r ai/vision/torch-cpu.txt --index-url https://download.pytorch.org/whl/cpu
+torch==2.13.0
+torchvision==0.28.0

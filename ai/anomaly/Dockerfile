@@ -1,4 +1,4 @@
-# Image anomaly — Sentinel-X (arm64 Raspberry Pi 5 et amd64 laptop de repli)
+# Image anomaly — Sentinel-X (arm64 : Raspberry Pi 5 et Pi 4 de repli ; amd64 : postes)
 FROM python:3.12-slim
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
