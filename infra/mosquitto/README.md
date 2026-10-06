@@ -8,7 +8,12 @@
 | `aclfile` | Droits par compte (moindre privilège) : `esp-01`, `vision`, `api`, `anomaly`, `monitor` | oui |
 | `passwd` | Comptes et mots de passe hachés | **non** (`.gitignore`) |
 
-## Créer le fichier `passwd` (PowerShell, dossier `infra`, Docker Desktop démarré)
+## Créer le fichier `passwd`
+
+**Méthode automatique (recommandée)** : `python tools\configurer.py` crée `infra\.env` et `passwd` ensemble, avec les
+mêmes mots de passe, sans Docker. `python tools\configurer.py --afficher` redonne ceux d'`esp-01` et de `monitor`.
+
+Méthode manuelle (PowerShell, dossier `infra`, Docker Desktop démarré) :
 
 ```powershell
 cd infra

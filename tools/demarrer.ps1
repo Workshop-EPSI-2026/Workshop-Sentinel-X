@@ -40,9 +40,9 @@ if ($Arreter) {
 
 # ------------------------------------------------------------------ 1. prealables
 Step "1/4 Prealables"
-if (-not (Test-Path infra\.env)) { Fail "infra\.env absent : copy infra\.env.example infra\.env, puis remplir les CHANGE_ME" }
+if (-not (Test-Path infra\.env)) { Fail "infra\.env absent : python tools\configurer.py (cree .env et les comptes MQTT)" }
 if (Select-String -Path infra\.env -Pattern 'CHANGE_ME' -Quiet) { Fail "infra\.env contient encore des CHANGE_ME" }
-if (-not (Test-Path infra\mosquitto\passwd)) { Fail "infra\mosquitto\passwd absent : voir infra\mosquitto\README.md" }
+if (-not (Test-Path infra\mosquitto\passwd)) { Fail "infra\mosquitto\passwd absent : python tools\configurer.py" }
 $envs = @{}
 Get-Content infra\.env | Where-Object { $_ -match '^\s*[A-Z_]+=' } | ForEach-Object {
   $k, $v = $_ -split '=', 2; $envs[$k.Trim()] = ($v -split ' #')[0].Trim()
@@ -104,7 +104,10 @@ Write-Host "`nSentinel-X demarre." -ForegroundColor Green
 if ($envs['COMPOSE_PROFILES'] -match 'app') {
   Write-Host "Dashboard : https://localhost  (depuis le reseau du point d'acces : https://192.168.137.1)"
   Start-Process "https://localhost"
-} else {
-  Write-Host "Socle seul (COMPOSE_PROFILES vide) : verifier avec mosquitto_sub (infra\mosquitto\README.md)"
 }
-Write-Host "Flux video local : http://127.0.0.1:8001/video · Arret : powershell -ExecutionPolicy Bypass -File tools\demarrer.ps1 -Arreter"
+if (-not $SansVision) { Write-Host "Video annotee : http://127.0.0.1:8001/video" }
+if ($envs['COMPOSE_PROFILES'] -match 'ai') { Write-Host "Sentinel Brain en direct : docker logs -f snx-anomaly" }
+Write-Host "Messages MQTT en direct : docker exec snx-mosquitto mosquitto_sub -h localhost -p 1883 -u monitor -P <mot de passe monitor> -t 'sentinel/#' -v"
+Write-Host "   (mot de passe : python tools\configurer.py --afficher)"
+Write-Host "Boitier simule : python tools\simulator.py --scenario all   (vrai boitier : firmware\sentinel_esp)"
+Write-Host "Arret : powershell -ExecutionPolicy Bypass -File tools\demarrer.ps1 -Arreter"

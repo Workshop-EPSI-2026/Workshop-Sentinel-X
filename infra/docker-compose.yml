@@ -126,7 +126,7 @@ services:
       SITE_PROFILE: /config/site.yml
       WEBHOOK_URL: ${WEBHOOK_URL:-}
     volumes:
-      - ../security/certs/ca.crt:/certs/ca.crt:ro
+      - ../security/certs:/certs:ro
       - ../config/${SITE_PROFILE_FILE:-site.example.yml}:/config/site.yml:ro   # profil initial
     networks:
       - app
@@ -187,6 +187,7 @@ services:
     build: ../ai/anomaly
     image: sentinel-x/anomaly:local
     container_name: snx-anomaly
+    user: "1883:1883"               # même utilisateur que Mosquitto : seul moyen de lire son journal (accès refusés)
     read_only: true
     tmpfs:
       - /tmp
@@ -203,7 +204,7 @@ services:
       MOSQUITTO_LOG: /mosquitto-log/mosquitto.log   # accès refusés -> signaux cyber
       TZ: Europe/Paris
     volumes:
-      - ../security/certs/ca.crt:/certs/ca.crt:ro
+      - ../security/certs:/certs:ro     # dossier entier : un fichier absent créerait un dossier « ca.crt » (Docker Desktop)
       - ../config/${SITE_PROFILE_FILE:-site.example.yml}:/config/site.yml:ro
       - mosquitto-log:/mosquitto-log:ro
     networks:

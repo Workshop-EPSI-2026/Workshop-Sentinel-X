@@ -44,7 +44,7 @@ services:
       YOLO_CONFIG_DIR: /tmp           # Ultralytics écrit ses réglages : système de fichiers en lecture seule
     volumes:
       - ../ai/vision/models:/models:ro
-      - ../security/certs/ca.crt:/certs/ca.crt:ro
+      - ../security/certs:/certs:ro
       - ../config/${SITE_PROFILE_FILE:-site.example.yml}:/config/site.yml:ro
     networks:
       - app

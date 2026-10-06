@@ -50,6 +50,17 @@ mémoire, processeur, disque, carte Wi-Fi, WSL 2 et Docker, webcam et vitesse r�
 Fermer puis rouvrir PowerShell si le script le demande (après l'installation de Node ou de VS Code), et le
 relancer : il reprend là où il en était. À la fin, il affiche le contrôle du poste.
 
+### Voir le projet tourner tout de suite (sans Docker ni configuration)
+
+```powershell
+.\demo.cmd            # vision sur la vidéo de démonstration + Sentinel Brain sur le simulateur du boîtier
+.\demo.cmd webcam     # vision sur votre webcam
+```
+
+Le navigateur s'ouvre sur `http://127.0.0.1:8001/video` (personnes détectées, zone interdite, badges, caméra masquée
+ou sombre) et la console montre Sentinel Brain qui analyse les scénarios du boîtier : dérive thermique, fuite de gaz,
+incendie, intrusion, effraction, rejeu, brouillage, avec son score et ses alertes expliquées. Rien n'est envoyé sur le réseau.
+
 ### Chemin B — installation manuelle
 
 1. Installer les logiciels de base (si absents) :
@@ -130,6 +141,7 @@ Si `git pull` a modifié un fichier `requirements*.txt` : `pip install -r requir
 
 ```powershell
 # Après installer.cmd, si verifier-serveur.cmd donne « PEUT être le serveur » :
+python tools\configurer.py        # crée infra\.env et les comptes MQTT (secrets aléatoires)
 # PowerShell ADMINISTRATEUR : pare-feu (443, 8883), heure NTP pour l'ESP, point d'accès Wi-Fi 2,4 GHz
 powershell -ExecutionPolicy Bypass -File tools\serveur-pc.ps1 -Ssid sentinel-x-gN
 python tools\doctor.py --serveur

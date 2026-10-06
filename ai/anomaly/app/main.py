@@ -114,7 +114,7 @@ class LogWatcher(threading.Thread):
         self.stop = threading.Event()
 
     def run(self) -> None:
-        pos, inode, last_ip = None, None, None
+        pos, inode, last_ip, warned = None, None, None, False
         while not self.stop.is_set():
             try:
                 st = self.path.stat()
@@ -132,6 +132,21 @@ class LogWatcher(threading.Thread):
                     pos = f.tell()
             except FileNotFoundError:
                 pass
+            except PermissionError:
+                if not warned:
+                    log.warning("journal de Mosquitto illisible (%s) : détection des accès refusés suspendue, "
+                                "nouvel essai toutes les 30 s (le service doit tourner sous l'utilisateur 1883)",
+                                self.path)
+                    warned = True
+                self.stop.wait(30)
+                continue
+            except OSError as e:                     # ne jamais tuer le fil : on réessaie
+                log.warning("journal de Mosquitto : %s", e)
+                self.stop.wait(5)
+                continue
+            if warned:
+                log.info("journal de Mosquitto lisible : détection des accès refusés active")
+                warned = False
             self.stop.wait(0.5)
 
     @staticmethod
