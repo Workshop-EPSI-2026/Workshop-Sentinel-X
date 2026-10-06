@@ -12,7 +12,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from app.mailer import SmtpConfig, build  # noqa: E402
-from app.rules import AlertRules, CameraWatch, Settings, fmt_duration  # noqa: E402
+from app.rules import AlertRules, CameraWatch, Settings, fmt_duration, route_alert  # noqa: E402
 from app.speech import command  # noqa: E402
 
 
@@ -74,6 +74,23 @@ class CameraWatchTest(unittest.TestCase):
         w = CameraWatch(Settings(camera_masked_s=2))
         for t, m in ((0, True), (1, False), (2, True), (3, False), (4, True), (5, False)):
             self.assertIsNone(w.on_vision({"device_id": "cam-01", "masked": m}, t))
+
+    def test_brain_masking_alert_becomes_camera_masked_then_restored(self):
+        rules, w = AlertRules(Settings()), CameraWatch(Settings(camera_restored_s=3))
+        sab = alert(kind="sabotage", explanation="Caméra masquée : image uniforme depuis 0 s")
+        n = route_alert(rules, w, sab, 100)
+        self.assertEqual((n.kind, n.spoken, n.photo), ("camera_masked", "Caméra masquée.", "before_mask"))
+        self.assertIsNone(route_alert(rules, w, sab, 101))                       # pas deux fois
+        self.assertIsNone(w.on_vision({"device_id": "cam-01", "masked": True}, 102))   # la vision confirme : rien
+        self.assertIsNone(w.on_vision({"device_id": "cam-01", "masked": False}, 110))
+        n = w.on_vision({"device_id": "cam-01", "masked": False}, 113)
+        self.assertEqual(n.kind, "camera_restored")
+        self.assertIn("13 s", n.lines[0])
+
+    def test_box_tamper_stays_sabotage(self):
+        n = route_alert(AlertRules(Settings()), CameraWatch(Settings()),
+                        alert(kind="sabotage", device="esp-01", explanation="Ouverture du boîtier"), 0)
+        self.assertEqual(n.spoken, "Sabotage détecté.")
 
     def test_duration_format(self):
         self.assertEqual(fmt_duration(75), "1 min 15 s")

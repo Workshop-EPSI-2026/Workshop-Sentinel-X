@@ -32,7 +32,7 @@ Le même contrat vaut sur un serveur Linux ou un Raspberry Pi : seule l'adresse 
 | `sentinel/<id>/config` | API | Boîtier | 1 | oui | Partie « boîtier » du profil de site |
 | `sentinel/site/config` | API | Brain, vision | 1 | oui | Profil de site complet (JSON) |
 | `sentinel/brain/score` | Brain, à chaque mesure et chaque message vision | API | 0 | non | Scores en direct |
-| `sentinel/brain/alert` | Brain, à chaque alerte | API | 1 | non | Copie MQTT de l'alerte (secours si `POST /alerts` échoue) |
+| `sentinel/brain/alert` | Brain, à chaque alerte | Notifications (`ai/notify`) | 1 | non | Copie MQTT de l'alerte : annonce vocale et mail |
 
 ## Télémétrie
 
@@ -123,7 +123,7 @@ plus vieille que 30 s ou dont l'`id` a déjà été vu.
 | `camera_degraded` | maintenance | info / warning | Image trop sombre, ou caméra hors ligne sans détection récente |
 
 Brain envoie une alerte à l'ouverture d'un incident puis seulement quand sa gravité monte. L'API regroupe les
-répétitions : un seul incident non résolu par (`device_id`, `type`) (`infra/postgres/init/01-schema.sql`).
+répétitions : un seul incident non résolu par (`device_id`, `type`) (index unique de la table `alerts`, `api/app/db.py`).
 
 ## Score en direct (`sentinel/brain/score`)
 

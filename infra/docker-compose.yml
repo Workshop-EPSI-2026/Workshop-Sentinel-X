@@ -93,7 +93,7 @@ services:
       -c work_mem=4MB
     volumes:
       - pg-data:/var/lib/postgresql/data
-      - ./postgres/init:/docker-entrypoint-initdb.d:ro   # schéma (01-schema.sql), au premier démarrage
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro   # réglages éventuels ; le schéma est créé par l'API
     networks:
       - data                          # réseau interne : aucun accès depuis l'extérieur
     healthcheck:

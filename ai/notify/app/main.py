@@ -23,6 +23,7 @@ import sys
 import threading
 import time
 import urllib.request
+from collections import deque
 from datetime import datetime
 from pathlib import Path
 
@@ -30,7 +31,7 @@ import paho.mqtt.client as mqtt
 import yaml
 
 from .mailer import Mailer, SmtpConfig, build
-from .rules import AlertRules, CameraWatch, Notice, Settings
+from .rules import AlertRules, CameraWatch, Notice, Settings, route_alert
 from .speech import Speaker
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -50,12 +51,18 @@ def read_env(path: str | None) -> dict[str, str]:
 
 class Snapshots:
     """Images de la caméra (service vision, http://127.0.0.1:8001/snapshot.jpg) : l'image actuelle à la demande,
-    et la dernière image saine, rafraîchie toutes les 2 s tant que la caméra n'est pas masquée."""
+    et les 20 dernières secondes (une image par seconde) pour retrouver la dernière vue avant un masquage : la vision
+    met 2 s à confirmer un masquage, les images de ces 2 s sont déjà noires."""
 
     def __init__(self, url: str, is_masked) -> None:
         self.url, self.is_masked = url.rstrip("/") + "/snapshot.jpg", is_masked
-        self.last_good: bytes | None = None
+        self.recent: deque[tuple[float, bytes]] = deque(maxlen=20)
+        self.last_clear = 0.0            # dernier message de la vision où la scène était bien visible
         threading.Thread(target=self._run, daemon=True, name="images").start()
+
+    def before_mask(self) -> bytes | None:
+        clear = [img for t, img in self.recent if t <= self.last_clear + 0.5]
+        return clear[-1] if clear else (self.recent[0][1] if self.recent else None)
 
     def now(self) -> bytes | None:
         try:
@@ -69,8 +76,8 @@ class Snapshots:
             if not self.is_masked():
                 img = self.now()
                 if img:
-                    self.last_good = img
-            time.sleep(2)
+                    self.recent.append((time.time(), img))
+            time.sleep(1)
 
 
 class NotifyService:
@@ -153,7 +160,7 @@ class NotifyService:
             if n.photo == "now":
                 photo, label = self.images.now(), "Image de la caméra au moment de l'alerte"
             elif n.photo == "before_mask":
-                photo, label = self.images.last_good, "Dernière image avant le masquage"
+                photo, label = self.images.before_mask(), "Dernière image avant le masquage"
             site = (self.profile.get("site") or {}).get("name", "Sentinel-X")
             self.mailer.send(build(n.subject, n.lines, when, site, self.smtp.sender, self.recipients(), photo, label,
                                    stamp))
@@ -165,11 +172,14 @@ class NotifyService:
             if msg.topic == "sentinel/site/config":
                 self.apply_profile(json.loads(msg.payload))
             elif msg.topic == "sentinel/brain/alert":
-                n = self.rules.on_alert(json.loads(msg.payload), now)
+                n = route_alert(self.rules, self.camera, json.loads(msg.payload), now)
                 if n:
                     self.notify(n)
             elif msg.topic.endswith("/vision"):
-                n = self.camera.on_vision(json.loads(msg.payload), now)
+                v = json.loads(msg.payload)
+                if not v.get("masked") and not v.get("low_light") and float(v.get("brightness") or 0) >= 40:
+                    self.images.last_clear = now
+                n = self.camera.on_vision(v, now)
                 if n:
                     self.notify(n)
         except (ValueError, TypeError) as e:

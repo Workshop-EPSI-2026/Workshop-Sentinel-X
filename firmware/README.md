@@ -53,7 +53,9 @@ Pour l'équipe qui travaille dans l'Arduino IDE : `sentinel_esp/sentinel_esp.ino
 4. Vérifier les broches en tête du sketch (mêmes valeurs que `include/pins.h`).
 5. Téléverser, moniteur série à 115200 : « Wi-Fi OK », « Heure OK », « MQTT OK », puis une ligne `->` par message.
 
-Passage en TLS (mo2) : `MQTT_PORT 8883`, `MQTT_USE_TLS 1` et un `certs.h` (CA de Lisa) dans le même dossier.
+Passage en TLS (mo2) : `MQTT_PORT 8883`, `MQTT_USE_TLS 1`. Le `certs.h` du même dossier (CA, certificat et clé d'`esp-01`)
+est créé sur le PC serveur par `python tools\configurer.py` (ou `python security\pki\pki.py`) ; il n'est jamais commité.
+TLS mutuel (li7) : en plus, `MQTT_USE_MTLS 1`.
 La garde locale, le tampon PSRAM, l'effraction et les commandes viennent avec mo1, dans ce même sketch.
 
 ## Secrets

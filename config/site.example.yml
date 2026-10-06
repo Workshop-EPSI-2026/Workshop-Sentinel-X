@@ -74,5 +74,5 @@ notifications:                     # service ai/notify sur le PC serveur (haut-p
   recipients: []                   # adresses des propriétaires ; vide = NOTIFY_TO de infra/.env
   types: []                        # vide = intrusions, rôdeur, badge hors horaires, sabotage, gaz, incendie, cyber
   cooldown_s: 120                  # même alerte répétée : une annonce au plus toutes les 2 min (sauf aggravation)
-  camera_masked_s: 2               # masquage confirmé (en plus des 2 s de la vision) avant d'alerter
+  camera_masked_s: 0               # délai ajouté aux 2 s de confirmation de la vision (0 = alerte immédiate)
   camera_restored_s: 3             # caméra rétablie depuis 3 s avant de l'annoncer

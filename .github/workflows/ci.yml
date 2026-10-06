@@ -64,7 +64,7 @@ jobs:
           python-version-file: .python-version
       - run: pip install "ruff==0.16.3" "uv==0.11.7"
       - name: ruff (règles communes de ruff.toml)
-        run: ruff check api ai tools
+        run: ruff check api ai tools security
       - name: Verrous de dépendances à jour
         run: python tools/lock_deps.py --check
 
@@ -80,6 +80,17 @@ jobs:
       - run: pip install -r ai/anomaly/requirements.txt
       - name: Tests unitaires et scénarios simulés
         run: python -m unittest discover -s ai/anomaly/tests -v
+
+  notify:
+    name: Notifications (tests)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Règles des annonces, caméra masquée / rétablie, mails
+        run: python -m unittest discover -s ai/notify/tests -v
 
   firmware:
     name: Firmware ESP32-S3 (compilation)

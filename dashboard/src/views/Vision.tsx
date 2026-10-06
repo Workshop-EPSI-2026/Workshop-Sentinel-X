@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { LevelTag } from '../components/StatusIcon';
-import { ALERT_TYPE, fmtAgo, fmtNum, severityLevel } from '../format';
+import { ALERT_TYPE, fmtAgo, fmtNum, severityLevel, type Level } from '../format';
 import { useApp, useNow } from '../state';
 import type { SystemHealth } from '../types';
 
@@ -11,7 +11,16 @@ export function Vision() {
   const [videoError, setVideoError] = useState(false);
   const url = source.videoUrl();
   const vision = state.config?.profile.vision;
-  const alerts = state.alerts.filter((a) => a.source === 'vision' || a.type.startsWith('intrusion') || a.type === 'loitering').slice(0, 6);
+  const alerts = state.alerts
+    .filter((a) => a.source === 'vision' || a.device_id.startsWith('cam') || a.type.startsWith('intrusion') || a.type === 'loitering')
+    .slice(0, 6);
+  const cams = Object.values(state.vision);
+  const cam = cams.length ? cams[0] : null;
+  const live = cam !== null && now / 1000 - cam.ts < 10;
+  const camState = !cam || !live ? 'Hors ligne' : cam.masked ? 'Caméra masquée' : cam.frozen ? 'Image figée' : cam.low_light ? 'Trop sombre (le PIR prend le relais)' : 'Scène visible';
+  const camLevel: Level = !cam || !live || cam.masked || cam.frozen ? 'critical' : cam.low_light ? 'warning' : 'good';
+  const inZone = cam ? cam.persons.filter((p) => p.in_zone) : [];
+  const intruders = inZone.filter((p) => !p.authorized);
 
   useEffect(() => {
     let alive = true;
@@ -33,7 +42,7 @@ export function Vision() {
             <img src={url} alt="Flux vidéo annoté : personnes détectées et zone interdite" onError={() => setVideoError(true)} />
           ) : (
             <div className="video-placeholder">
-              <p>{url ? 'Flux indisponible : vérifier que la vision tourne sur le PC serveur (ai\\vision\\run-windows.ps1).' : 'Pas de flux vidéo en mode démo.'}</p>
+              <p>{url ? 'Flux indisponible : vérifier que la vision tourne sur le PC serveur (tools\\demarrer.ps1).' : 'Pas de flux vidéo en mode démo.'}</p>
               {url && <button type="button" className="btn" onClick={() => setVideoError(false)}>Réessayer</button>}
             </div>
           )}
@@ -41,6 +50,25 @@ export function Vision() {
       </section>
 
       <aside className="vision-side">
+        <section className="card">
+          <h2 className="card-title">État en direct{cam ? ` · ${cam.device_id}` : ''}</h2>
+          <p><LevelTag level={camLevel} label={camState} /></p>
+          <div className="tiles two">
+            <div className="tile"><span className="tile-label">Personnes vues</span><span className="tile-value">{cam && live ? cam.persons.length : '—'}</span></div>
+            <div className="tile"><span className="tile-label">Dans la zone</span><span className="tile-value">{cam && live ? inZone.length : '—'}</span></div>
+          </div>
+          {live && inZone.length > 0 && (
+            <ul className="incident-mini">
+              {inZone.map((p) => (
+                <li key={p.track_id}>
+                  <LevelTag level={p.authorized ? 'good' : 'critical'} label={p.authorized ? `Badge ${p.badge} autorisé` : p.badge !== null ? `Badge ${p.badge} non autorisé` : 'Sans badge'} />
+                  <span className="muted nowrap">#{p.track_id} · {Math.round(p.dwell_s)} s</span>
+                </li>
+              ))}
+            </ul>
+          )}
+          {live && intruders.length > 0 && <p className="muted small">Brain confirme l'intrusion avec le PIR et les horaires des badges.</p>}
+        </section>
         <section className="card">
           <h2 className="card-title">Performances</h2>
           <div className="tiles two">

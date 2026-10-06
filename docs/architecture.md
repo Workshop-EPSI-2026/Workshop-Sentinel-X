@@ -185,10 +185,16 @@ vision passe dans un conteneur (`docker-compose.linux.yml`).
 | `/api/v1/health` | GET | Santé du PC, des conteneurs, des boîtiers et de la vision |
 | `/ws` | WebSocket | Télémétrie, vision, scores, incidents en temps réel |
 
-Base (`infra/postgres/init/01-schema.sql`, tâche c5) : `devices`, `telemetry`, `events`, `health`, `device_status`,
-`vision_events`, `brain_scores`, `alerts` (cycle de vie ouvert → acquitté → résolu, un seul incident actif par
-équipement et type), `commands`, `config_versions`, `audit_log`, vues `v_latest_telemetry`, `v_open_alerts`,
-`v_training_telemetry` (export pour recalibrer Brain). Insertion idempotente sur (`device_id`, `boot_id`, `seq`).
+Base PostgreSQL : **créée par l'API** au démarrage (migrations de `api/app/db.py`, tâches c2 et c5) : `devices`,
+`telemetry`, `events`, `device_health`, `scores`, `alerts` (cycle de vie ouvert → acquitté → résolu, un seul incident
+actif par équipement et type, répétitions comptées), `commands`, `config_versions`, `audit_log`. Insertion idempotente
+sur (`device_id`, `boot_id`, `seq`). L'API accepte tous les types d'incidents de Brain v3 et combine les scores par
+équipement (boîtier, caméra) en une jauge : le maximum par domaine sur les équipements actifs.
+
+**Notifications** (`ai/notify`, sur le PC car il faut les haut-parleurs) : annonce vocale (« Intrus détecté »,
+« Caméra masquée », « Caméra rétablie »…) et mail aux propriétaires avec la photo du moment, la date et l'heure ; pour
+un masquage, la dernière image avant le masquage. Réglages : section `notifications` du profil (page Réglages) et
+SMTP dans `infra/.env`.
 
 Vues du dashboard : **Supervision** (jauge Sentinel Score, courbes, voyant du boîtier), **Incidents** (explication,
 acquittement), **Vision** (flux annoté, personnes, badges, état de la caméra), **Système** (santé de chaque brique),

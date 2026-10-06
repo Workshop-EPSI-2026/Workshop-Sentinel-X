@@ -167,6 +167,15 @@ class VisionFusionTest(unittest.TestCase):
         self.vision(t, [(3, True, 1.0, None)])                  # quelqu'un, puis plus rien
         self.assertIn(("sabotage", "critical"), self.types(self.brain.tick(t + 20)))
 
+    def test_box_back_online_without_jamming_clears_cyber_score(self):
+        b = SentinelBrain(BrainConfig())
+        b.handle("sentinel/esp-01/telemetry", json.dumps(telem(1, 1000.0)), 1000.0)
+        b.handle("sentinel/esp-01/status", "offline", 1001.0)
+        b.handle("sentinel/esp-01/status", "online", 1010.0)
+        out = b.handle("sentinel/esp-01/telemetry", json.dumps(telem(2, 1012.0)), 1012.0)
+        score = [o["payload"] for o in out if o["kind"] == "score"][0]
+        self.assertEqual(score["cyber"], 0)
+
     def test_camera_offline_without_detection_is_maintenance(self):
         t = at(10)
         self.vision(t)

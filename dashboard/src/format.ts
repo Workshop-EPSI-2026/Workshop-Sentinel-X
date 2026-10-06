@@ -34,6 +34,11 @@ export const ALERT_TYPE: Record<AlertType, string> = {
   jamming_suspected: 'Brouillage Wi-Fi présumé',
   cyber_attack: 'Attaque cyber',
   sensor_fault: 'Capteur défaillant',
+  presence_authorized: 'Présence autorisée',
+  presence_to_verify: 'Présence à vérifier',
+  thermal_drift: 'Dérive thermique',
+  unusual_pattern: 'Combinaison inhabituelle',
+  camera_degraded: 'Caméra dégradée',
 };
 
 export const DOMAIN: Record<Domain, string> = {

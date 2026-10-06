@@ -196,6 +196,16 @@ class Database:
             try:
                 rows = await (await c.execute("SELECT version FROM schema_migrations")).fetchall()
                 done = {r["version"] for r in rows}
+                if not done:
+                    old = await (await c.execute(
+                        "SELECT count(*) AS n FROM information_schema.tables WHERE table_schema = 'public'"
+                        " AND table_name IN ('telemetry', 'alerts', 'devices')")).fetchone()
+                    if old and old["n"]:
+                        raise RuntimeError(
+                            "La base contient déjà des tables créées par une version précédente (avant l'API). "
+                            "Exporter les données utiles, puis repartir d'une base vide : "
+                            "cd infra ; docker compose down ; docker volume rm sentinel-x_pg-data ; "
+                            "puis relancer tools\\demarrer.ps1")
                 for version, name, sql in MIGRATIONS:
                     if version in done:
                         continue

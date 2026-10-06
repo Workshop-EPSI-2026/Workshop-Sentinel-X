@@ -141,7 +141,7 @@ Si `git pull` a modifié un fichier `requirements*.txt` : `pip install -r requir
 
 ```powershell
 # Après installer.cmd, si verifier-serveur.cmd donne « PEUT être le serveur » :
-python tools\configurer.py        # crée infra\.env et les comptes MQTT (secrets aléatoires)
+python tools\configurer.py        # crée infra\.env, les comptes MQTT et les certificats (secrets aléatoires)
 # PowerShell ADMINISTRATEUR : pare-feu (443, 8883), heure NTP pour l'ESP, point d'accès Wi-Fi 2,4 GHz
 powershell -ExecutionPolicy Bypass -File tools\serveur-pc.ps1 -Ssid sentinel-x-gN
 python tools\doctor.py --serveur
@@ -189,10 +189,10 @@ Profil de site : [`config/site.example.yml`](config/site.example.yml).
 | `firmware/` | Firmware ESP32-S3 (PlatformIO), brochage `pins.h` | Momo |
 | `config/` | Profils de site (personnalisation) | Constantin, Jeffrick |
 | `api/` | API REST + WebSocket | Constantin |
-| `dashboard/` | Interface web (compilée sur laptop) | Constantin |
-| `ai/vision/`, `ai/anomaly/` | Vision et Sentinel Brain | Jeffrick |
-| `infra/` | `docker-compose.yml` (+ `.dev`, `.linux`), Mosquitto, nginx, schéma PostgreSQL | Constantin, Michel, Jeffrick (schéma) |
-| `security/` | PKI (sans clés), hardening, audits | Lisa |
+| `dashboard/` | Interface web React (compilée par `demarrer.ps1`) | Constantin |
+| `ai/vision/`, `ai/anomaly/`, `ai/notify/` | Vision, Sentinel Brain, notifications (voix, mails) | Jeffrick |
+| `infra/` | `docker-compose.yml` (+ `.dev`, `.linux`), Mosquitto, nginx, PostgreSQL (schéma créé par l'API) | Constantin, Michel |
+| `security/` | PKI (`pki/pki.py`, sans clés), hardening, audits | Lisa |
 | `docs/` | Contrat, réseau, câblage, fablab, preuves, dossier | Tous |
 | `tools/` | Installation et contrôle des postes, préparation et démarrage du PC serveur, simulateur d'ESP, Kanban | Tous |
 | `.github/` | CI, modèles d'issues et de PR, CODEOWNERS, plan du Kanban | Constantin |
@@ -200,25 +200,36 @@ Profil de site : [`config/site.example.yml`](config/site.example.yml).
 ## Démarrer Sentinel-X (sur le PC serveur)
 
 ```powershell
-copy infra\.env.example infra\.env    # remplir toutes les valeurs CHANGE_ME
-# créer infra\mosquitto\passwd : voir infra\mosquitto\README.md
-powershell -ExecutionPolicy Bypass -File tools\demarrer.ps1              # Docker Desktop + stack + vision
+python tools\configurer.py                                              # une fois : .env, comptes MQTT, certificats
+powershell -ExecutionPolicy Bypass -File tools\demarrer.ps1              # tout démarre
 powershell -ExecutionPolicy Bypass -File tools\demarrer.ps1 -Arreter     # tout arrêter (données conservées)
 ```
+
+`demarrer.ps1` lance Docker Desktop si besoin, compile le dashboard la première fois (Node.js), démarre la base,
+le broker, l'API, nginx et Sentinel Brain, puis la vision (webcam) et les notifications sur le PC.
+
+| Quoi | Où |
+|---|---|
+| Dashboard (Supervision, Incidents, Vision, Système, Réglages) | `https://localhost` sur le PC, `https://192.168.137.1` depuis le point d'accès ; jeton : `python tools\configurer.py --afficher` |
+| Flux vidéo annoté | page Vision du dashboard, ou `http://127.0.0.1:8001/video` |
+| Sentinel Brain en direct | `docker logs -f snx-anomaly` |
+| Annonces vocales et mails | fenêtre « Sentinel-X notifications » ; mails : `SMTP_*` et `NOTIFY_TO` dans `infra\.env` (`ai/notify/README.md`) |
+| Boîtier simulé | `python tools\simulator.py --scenario all` (vrai boîtier : `firmware\sentinel_esp`) |
+
+Le navigateur signale un certificat inconnu tant que `security\certs\ca.crt` n'est pas importé dans « Autorités de
+certification racines de confiance » (`certmgr.msc`) : c'est la CA locale créée par `configurer.py`.
 
 Progression dans `infra\.env` :
 
 | Moment | `COMPOSE_FILE` | `MQTT_PORT` / `MQTT_TLS` | `COMPOSE_PROFILES` |
 |---|---|---|---|
-| Socle | `docker-compose.yml:docker-compose.dev.yml` | `1883` / `false` | *(vide)* |
-| Dès que l'API existe | idem | idem | `app` |
-| Après les certificats de Lisa | `docker-compose.yml` | `8884` / `true` | `app` |
-| Dès que Brain est prêt | `docker-compose.yml` | `8884` / `true` | `app,ai` |
+| Socle (après `configurer.py`) | `docker-compose.yml:docker-compose.dev.yml` | `1883` / `false` | `app,ai` |
+| Boîtier passé en TLS | `docker-compose.yml` | `8884` / `true` | `app,ai` |
 | TLS mutuel prêt | idem, avec `MOSQUITTO_CONF=mosquitto.mtls.conf` | `8884` / `true` | `app,ai` |
 
-`demarrer.ps1` relance `docker compose up -d --build` à chaque fois. Le séparateur `:` de `COMPOSE_FILE` est garanti
-sous Windows par `COMPOSE_PATH_SEPARATOR=:` dans `.env`. Sous Linux ou sur un Raspberry Pi, ajouter
-`:docker-compose.linux.yml` (vision dans un conteneur) et contrôler avec `python3 tools/doctor.py --linux`.
+Le séparateur `:` de `COMPOSE_FILE` est garanti sous Windows par `COMPOSE_PATH_SEPARATOR=:` dans `.env`. Sous Linux
+ou sur un Raspberry Pi, ajouter `:docker-compose.linux.yml` (vision dans un conteneur) et contrôler avec
+`python3 tools/doctor.py --linux`.
 
 Plan B sans webcam : `python ai\vision\tools\demo_video.py` puis
 `tools\demarrer.ps1 -Source ai\vision\data\demo.mp4`.

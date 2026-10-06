@@ -1,7 +1,9 @@
 # Sécurité — Lisa (binômes : Constantin, Momo, Jeffrick pour la détection cyber)
 
 ## PKI locale (OpenSSL, ECDSA P-256)
-Script dans `security/pki/` (versionné **sans** aucune clé). Sortie dans `security/certs/` (**jamais commité**).
+Script `security/pki/pki.py` (versionné **sans** aucune clé, lancé par `tools/configurer.py` s'il n'y a pas encore de
+certificats) : `python security\pki\pki.py` crée ce qui manque, `--refaire` recrée tout. Sortie dans `security/certs/`
+(**jamais commité**) et `firmware/sentinel_esp/certs.h` (CA, certificat et clé d'`esp-01`, pour le TLS du boîtier).
 OpenSSL est fourni avec Git pour Windows (`C:\Program Files\Git\usr\bin\openssl.exe`).
 
 | Fichier | Usage |

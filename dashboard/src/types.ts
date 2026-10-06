@@ -73,12 +73,38 @@ export type AlertType =
   | 'gas_leak'
   | 'jamming_suspected'
   | 'cyber_attack'
-  | 'sensor_fault';
+  | 'sensor_fault'
+  // Sentinel Brain v3 : badges et horaires, dérive, combinaison inhabituelle, état de la caméra
+  | 'presence_authorized'
+  | 'presence_to_verify'
+  | 'thermal_drift'
+  | 'unusual_pattern'
+  | 'camera_degraded';
 
 export interface Factor {
   name: string;
-  value: number;
+  value: number | boolean | string | null; // Brain explique aussi par des états (tamper = true) ou des messages
   contribution: number;
+}
+
+// sentinel/<cam>/vision relayé par l'API (docs/contracts.md, section Vision)
+export interface VisionPerson {
+  track_id: number;
+  in_zone: boolean;
+  dwell_s: number;
+  badge: number | null;
+  authorized: boolean;
+}
+
+export interface VisionState {
+  device_id: string;
+  ts: number;
+  fps: number;
+  masked: boolean;
+  low_light: boolean;
+  frozen: boolean;
+  zone_count: number;
+  persons: VisionPerson[];
 }
 
 export interface Alert {
@@ -178,4 +204,5 @@ export type WsMessage =
   | { type: 'health'; data: DeviceHealth }
   | { type: 'status'; data: DeviceStatus }
   | { type: 'score'; data: Scores }
-  | { type: 'alert'; data: Alert };
+  | { type: 'alert'; data: Alert }
+  | { type: 'vision'; data: VisionState };

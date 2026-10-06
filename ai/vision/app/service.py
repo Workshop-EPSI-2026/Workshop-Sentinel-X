@@ -98,6 +98,7 @@ class Frames:
         self.jpeg: bytes | None = None
         self.t = 0.0
         self.state: VisionState | None = None
+        self.latency_ms: float | None = None     # traitement d'une image (YOLO compris), moyenne glissante
         self.cond = threading.Condition()
 
     def put(self, img: np.ndarray, st: VisionState) -> None:
@@ -118,6 +119,7 @@ def make_app(frames: Frames, s: VisionSettings) -> FastAPI:
         ok = age is not None and age < 5
         body = {"status": "ok" if ok else "degraded", "device_id": s.device_id, "last_frame_age_s": age,
                 "fps": st.fps if st else None, "masked": st.masked if st else None,
+                "latency_ms": round(frames.latency_ms, 1) if frames.latency_ms is not None else None,
                 "persons": len(st.persons) if st else None}
         return Response(json.dumps(body), media_type="application/json", status_code=200 if ok else 503)
 
@@ -178,6 +180,8 @@ def run_loop(s: VisionSettings, pipeline: VisionPipeline, publisher: Publisher, 
             continue
         misses, n = 0, n + 1
         state, img = pipeline.process(frame, t0)
+        ms = (time.time() - t0) * 1000.0
+        frames.latency_ms = ms if frames.latency_ms is None else 0.9 * frames.latency_ms + 0.1 * ms
         publisher.maybe_publish(state)
         frames.put(img, state)
         if period:

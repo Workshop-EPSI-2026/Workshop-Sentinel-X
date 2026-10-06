@@ -227,7 +227,7 @@ class Notifications(Strict):
     recipients: list[str] = Field(default_factory=list, max_length=20)
     types: list[str] = Field(default_factory=list, max_length=30)   # vide = valeurs par défaut du service
     cooldown_s: int = Field(default=120, ge=0, le=86400)
-    camera_masked_s: float = Field(default=3.0, ge=0, le=120)
+    camera_masked_s: float = Field(default=0.0, ge=0, le=120)
     camera_restored_s: float = Field(default=3.0, ge=0, le=120)
 
 

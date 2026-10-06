@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useReducer, type ReactNode } from 'react';
 import { AuthError, type DataSource, type LinkState } from './api/source';
-import type { Alert, DeviceEvent, DeviceHealth, DeviceStatus, Scores, SiteConfig, Telemetry, WsMessage } from './types';
+import type { Alert, DeviceEvent, DeviceHealth, DeviceStatus, Scores, SiteConfig, Telemetry, VisionState, WsMessage } from './types';
 
 export const WINDOW_S = 15 * 60; // fenêtre affichée et conservée en mémoire
 
@@ -14,6 +14,7 @@ export interface State {
   scores: Scores[];
   alerts: Alert[];
   lastEvent: DeviceEvent | null;
+  vision: Record<string, VisionState>;
 }
 
 type Action =
@@ -25,7 +26,7 @@ type Action =
   | WsMessage;
 
 const initial: State = {
-  link: 'connecting', loadError: null, config: null, telemetry: {}, health: {}, status: {}, scores: [], alerts: [], lastEvent: null,
+  link: 'connecting', loadError: null, config: null, telemetry: {}, health: {}, status: {}, scores: [], alerts: [], lastEvent: null, vision: {},
 };
 
 function trim<T extends { ts: number }>(items: T[]): T[] {
@@ -83,6 +84,10 @@ function reducer(s: State, a: Action): State {
     }
     case 'event':
       return { ...s, lastEvent: a.data };
+    case 'vision':
+      return { ...s, vision: { ...s.vision, [a.data.device_id]: a.data } };
+    default:
+      return s; // type de message inconnu (API plus récente que le dashboard) : ignoré, jamais d'écran blanc
   }
 }
 

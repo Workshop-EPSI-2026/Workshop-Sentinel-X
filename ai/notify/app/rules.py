@@ -34,7 +34,7 @@ class Settings:
     recipients: list[str] = field(default_factory=list)
     types: tuple[str, ...] = DEFAULT_TYPES
     cooldown_s: float = 120.0
-    camera_masked_s: float = 2.0
+    camera_masked_s: float = 0.0   # la vision confirme déjà le masquage pendant 2 s
     camera_restored_s: float = 3.0
 
     @classmethod
@@ -110,14 +110,29 @@ class CameraWatch:
             return None
         st["masked"], st["since"] = raw, None
         if raw:
-            st["masked_at"] = now
-            return Notice("camera_masked", cam, "critical", "Caméra masquée.", "CRITIQUE — Caméra masquée",
-                          [f"La caméra {cam} ne voit plus la scène (objectif couvert ou image noire).",
-                           "Image jointe : la dernière vue avant le masquage."], now, photo="before_mask")
+            return self._masked(cam, st, now)
         dur = now - (st["masked_at"] or now)
         return Notice("camera_restored", cam, "info", "Caméra rétablie.", "Information — Caméra rétablie",
                       [f"La caméra {cam} voit de nouveau la scène, après {fmt_duration(dur)} de masquage.",
                        "Image jointe : la vue actuelle."], now, photo="now")
+
+    def force_masked(self, cam: str, now: float, detail: str = "") -> Notice | None:
+        """Brain a déjà conclu au masquage (alerte sabotage) : on l'annonce une seule fois et on surveille le retour."""
+        st = self.state.setdefault(cam, {"masked": False, "since": None, "masked_at": None})
+        if st["masked"]:
+            return None                              # déjà annoncée par la surveillance de la vision
+        st["masked"], st["since"] = True, None
+        return self._masked(cam, st, now, detail)
+
+    @staticmethod
+    def _masked(cam: str, st: dict, now: float, detail: str = "") -> Notice:
+        st["masked_at"] = now
+        lines = [f"La caméra {cam} ne voit plus la scène (objectif couvert ou image noire)."]
+        if detail:
+            lines.append(detail)
+        lines.append("Image jointe : la dernière vue avant le masquage.")
+        return Notice("camera_masked", cam, "critical", "Caméra masquée.", "CRITIQUE — Caméra masquée", lines, now,
+                      photo="before_mask")
 
     def is_masked(self, cam: str) -> bool:
         return bool(self.state.get(cam, {}).get("masked"))
@@ -126,3 +141,12 @@ class CameraWatch:
 def fmt_duration(s: float) -> str:
     s = int(round(s))
     return f"{s // 60} min {s % 60:02d} s" if s >= 60 else f"{s} s"
+
+
+def route_alert(rules: AlertRules, camera: CameraWatch, a: dict, now: float) -> Notice | None:
+    """Une alerte de Brain : le masquage d'une caméra devient « Caméra masquée » (et son retour sera annoncé),
+    le reste suit les règles des alertes."""
+    device, kind = str(a.get("device_id", "")), str(a.get("type", ""))
+    if kind == "sabotage" and device.startswith("cam") and "masqu" in str(a.get("explanation", "")).lower():
+        return camera.force_masked(device, now, str(a.get("explanation", "")))
+    return rules.on_alert(a, now)

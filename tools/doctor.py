@@ -142,8 +142,9 @@ def check_node() -> None:
     if rc:
         return report("KO", "Node.js", "absent", f"winget install --id CoreyButler.NVMforWindows -e ; nvm install {want} ; nvm use {want}")
     major = out.lstrip("v").split(".")[0]
-    report("OK" if major == want else "KO", "Node.js", out + ("" if major == want else f" (attendu {want}.x)"),
-           "" if major == want else f"nvm install {want} ; nvm use {want}")
+    ok = major.isdigit() and int(major) >= int(want)          # version de .nvmrc ou plus récente (Vite 8)
+    report("OK" if ok else "KO", "Node.js", out + ("" if ok else f" (attendu {want}.x ou plus)"),
+           "" if ok else f"nvm install {want} ; nvm use {want}")
 
 
 def check_docker(required: bool, pi: bool = False) -> None:

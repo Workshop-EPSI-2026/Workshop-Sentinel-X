@@ -170,6 +170,8 @@ class SentinelBrain:
             d.online = str(payload) != "offline"
             if not d.online:
                 d.offline_rx = rx_ts
+            elif d.rssi_alarm_rx is None or rx_ts - d.rssi_alarm_rx > 180:
+                d.offline_rx = None     # retour sans signe de brouillage (redémarrage, coupure courte) : on oublie
             return self._incidents(device, d, rx_ts, None)
         return []
 
