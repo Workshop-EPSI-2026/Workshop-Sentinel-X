@@ -396,8 +396,8 @@ taches:
   detail:
   - 'Michel câble selon docs/cablage.md et firmware/include/pins.h, Momo programme : PlatformIO (esp32-s3-devkitc-1,
     port COM), blink sur la LED RGB.'
-  - DHT11 sur GPIO 4 (lecture toutes les 2 s), PIR sur GPIO 5 (cavalier H, sensibilité max, délai min), OLED sur
-    GPIO 8/9 si disponible.
+  - DHT11 sur GPIO 4 (lecture toutes les 2 s), PIR sur GPIO 5 (cavalier H, sensibilité max, délai min), LCD 1602
+    en 4 bits (RS 8, E 9, D4-D7 13-16, RW à GND, potentiomètre de contraste).
   - 'MQ-2 en 5 V : AO via pont 10k/10k vers GPIO 1, DO via pont 10k/15k vers GPIO 6 ; préchauffage immédiat ; vérifier
     au multimètre que GPIO 1 reste sous 2,5 V.'
   - 'Effraction : feuille de cuivre sur GPIO 7 (tactile), relever la valeur au repos et main posée.'
@@ -496,7 +496,7 @@ taches:
   labels:
   - fablab
   detail:
-  - Pied à coulisse sur ESP32-S3, MQ-2, DHT11, PIR (dôme), plaque d’essai, OLED si disponible.
+  - Pied à coulisse sur ESP32-S3, MQ-2, DHT11, PIR (dôme), plaque d’essai, écran LCD 1602.
   - 'Fusion 360 : un seul compartiment (ESP32-S3 et capteurs), aération pour le MQ-2, DHT11 loin du MQ-2, dôme
     PIR et LED d’état en façade.'
   - 'Couvercle : emplacement de la feuille de cuivre tactile (effraction). Alimentation : un câble USB depuis le

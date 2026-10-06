@@ -35,7 +35,7 @@ Principes : **autonomie à trois niveaux**, **sécurité dès mardi**, **aucune 
 | MQ-2 (module) | Sortie analogique en millivolts calibrés et ratio par rapport à la ligne de base apprise ; sortie DO en seuil matériel par interruption | Chauffe, préchauffage nécessaire, sortie jusqu'à 5 V, pas de mesure en ppm sans gaz étalon | Ponts diviseurs, ligne de base apprise au démarrage, on parle de « ratio » et non de ppm |
 | PIR HW-416-B | Détection de mouvement jusqu'à environ 7 m, comptage d'événements par minute | Temps mort, sensible à la chaleur | Cavalier en mode H (redéclenchable), sensibilité au maximum, délai au minimum ; fusion avec la vision |
 | PC serveur Windows 11 | Serveur complet, point d'accès Wi-Fi, YOLO sur le processeur du PC | Veille et mises à jour Windows, webcam inaccessible depuis Docker Desktop, point d'accès à réactiver après redémarrage | Veille désactivée, mises à jour suspendues, vision lancée hors Docker, redémarrage répété |
-| Webcam USB, buzzer, LEDs (OLED si disponible) | Vision ; alarme sonore et visuelle ; affichage | Webcam, buzzer et LEDs confirmés ; OLED non confirmée | Sans OLED : la LED RGB intégrée et les LEDs servent de voyant d'état |
+| Webcam USB, buzzer, LEDs, LCD 1602 | Vision ; alarme sonore et visuelle ; affichage de l'état sur le boîtier | LCD sans module I2C : 6 broches, contraste à régler | Mode 4 bits, RW à la masse, potentiomètre sur V0 |
 
 Idée clé : **une feuille de cuivre collée à l'intérieur du couvercle, reliée à une entrée tactile de l'ESP32-S3,
 devient un détecteur d'effraction gratuit**. Toute manipulation du boîtier est détectée sans composant supplémentaire.
@@ -79,7 +79,8 @@ L'opérateur ne voit que nginx, en HTTPS.
 | MQ-2 AO | GPIO 1 (ADC1) | 5 V | Pont 10 kΩ / 10 kΩ (max 2,5 V), moyenne de 16 lectures en mV |
 | MQ-2 DO | GPIO 6 | — | Pont 10 kΩ / 15 kΩ (≈ 3 V), seuil matériel par interruption |
 | Effraction (tactile) | GPIO 7 (T7) | — | Feuille de cuivre dans le couvercle, seuil auto-calibré |
-| OLED SDA / SCL | GPIO 8 / 9 | 3,3 V | Si disponible |
+| LCD 1602 RS / E | GPIO 8 / 9 | 5 V | Mode 4 bits, RW à la masse |
+| LCD 1602 D4 à D7 | GPIO 13 à 16 | — | Contraste par potentiomètre sur V0 |
 | Buzzer | GPIO 10 | — | Alarme sonore locale |
 | LED verte / rouge | GPIO 11 / 12 | — | Résistance série |
 | LED RGB intégrée | GPIO 48 | — | Voyant d'état (38 sur certaines cartes) |
@@ -278,7 +279,7 @@ pour les incidents, export CSV.
 ## 11. Fabrication et vidéo
 
 Le boîtier n'abrite que l'ESP32-S3 et ses capteurs : il est plus petit et s'imprime plus vite. Alimentation par un câble
-USB depuis le PC serveur ou un chargeur 5 V. Façade : fenêtre OLED (si disponible), dôme PIR, LED d'état visible, gravure laser.
+USB depuis le PC serveur ou un chargeur 5 V. Façade : fenêtre de l'écran LCD, dôme PIR, LED d'état visible, gravure laser.
 Couvercle : feuille de cuivre tactile. Aération pour le MQ-2 ; le DHT11 loin de lui. La webcam, branchée au PC, est posée près du boîtier.
 
 Vidéo « Sentinel Drop » : accroche, boîtier, incrustation (dashboard, YOLO, Sentinel Score), outro ; 1080 × 1920,

@@ -17,7 +17,7 @@ monitor_speed = 115200
 lib_deps =
   adafruit/DHT sensor library
   adafruit/Adafruit Unified Sensor
-  adafruit/Adafruit SSD1306
+  arduino-libraries/LiquidCrystal
   adafruit/Adafruit NeoPixel
   knolleary/PubSubClient
   bblanchon/ArduinoJson
@@ -33,6 +33,9 @@ La CI compile le firmware dès que `firmware/platformio.ini` existe : ne le comm
 | Garde locale | 1 | EWMA + écart robuste + pente par capteur, `edge_score`, alarme réflexe, échantillonnage accéléré |
 | Réseau | 0 | Wi-Fi, MQTT TLS (`WiFiClientSecure` + `setCACert`, puis certificat client), tampon PSRAM rejoué, dernière volonté |
 | Santé | 0 | Message `health` toutes les 30 s |
+
+Écran LCD 1602 (2 × 16 caractères), rafraîchi par la tâche Santé, sans bloquer les capteurs :
+ligne 1 = mesures (`T22C H45% G1.02`), ligne 2 = mode, alarme et sa cause, ou `HORS LIGNE` quand le tampon est actif.
 
 Modes : `learning` (10 min), `armed`, `maintenance`. La configuration `sentinel/<id>/config` est enregistrée en NVS.
 Voyant RGB : vert surveillance, bleu apprentissage, orange suspicion, rouge alarme, violet hors ligne, blanc maintenance.
