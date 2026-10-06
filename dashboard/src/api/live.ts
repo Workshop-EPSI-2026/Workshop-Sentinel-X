@@ -80,6 +80,10 @@ export function createLiveSource(token: string): DataSource {
       };
     },
 
-    videoUrl: () => `/video?token=${encodeURIComponent(token)}`,
+    // Une balise <img> n'envoie pas d'en-tête : ticket de 60 s, jamais le jeton opérateur dans une URL
+    async videoUrl() {
+      const { ticket } = await call<{ ticket: string }>('POST', '/api/v1/video/ticket');
+      return `/video?ticket=${encodeURIComponent(ticket)}`;
+    },
   };
 }

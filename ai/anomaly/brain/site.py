@@ -48,6 +48,7 @@ class SitePolicy:
     badges: dict[int, Badge] = field(default_factory=dict)
     correlation_window_s: float = 5.0     # PIR et personne vue à moins de 5 s : intrusion confirmée
     loitering_s: float = 20.0             # présence prolongée dans la zone
+    vision_confirm_s: float = 3.0         # inconnu dans la zone depuis 3 s : intrus confirmé sans PIR (0 = PIR exigé)
     camera_timeout_s: float = 15.0        # caméra silencieuse : hors ligne
     sabotage_window_s: float = 60.0       # caméra muette moins de 60 s après une détection : sabotage
     auth_failure_burst: int = 5           # accès MQTT refusés en 60 s : attaque
@@ -69,6 +70,7 @@ class SitePolicy:
         return cls(timezone=(profile.get("site", {}) or {}).get("timezone", d.timezone), badges=badges,
                    correlation_window_s=float(br.get("correlation_window_s", d.correlation_window_s)),
                    loitering_s=float(br.get("loitering_s", d.loitering_s)),
+                   vision_confirm_s=float(br.get("vision_confirm_s", d.vision_confirm_s)),
                    camera_timeout_s=float(br.get("camera_timeout_s", d.camera_timeout_s)),
                    sabotage_window_s=float(br.get("sabotage_window_s", d.sabotage_window_s)),
                    auth_failure_burst=int(br.get("auth_failure_burst", d.auth_failure_burst)),

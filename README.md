@@ -205,8 +205,10 @@ powershell -ExecutionPolicy Bypass -File tools\demarrer.ps1              # tout 
 powershell -ExecutionPolicy Bypass -File tools\demarrer.ps1 -Arreter     # tout arrêter (données conservées)
 ```
 
-`demarrer.ps1` lance Docker Desktop si besoin, compile le dashboard la première fois (Node.js), démarre la base,
-le broker, l'API, nginx et Sentinel Brain, puis la vision (webcam) et les notifications sur le PC.
+`demarrer.ps1` lance Docker Desktop si besoin, vérifie que les ports 443 et MQTT sont libres, compile le dashboard
+s'il a changé (Node.js), démarre la base, le broker, l'API, nginx et Sentinel Brain, attend leurs vérifications de
+santé (bilan `[OK]` / `[KO]` par conteneur), puis lance la vision (webcam) et les notifications sur le PC.
+Installer une nouvelle version : `git pull`, ou un dossier vide — jamais une copie par-dessus l'ancienne.
 
 | Quoi | Où |
 |---|---|
@@ -214,12 +216,13 @@ le broker, l'API, nginx et Sentinel Brain, puis la vision (webcam) et les notifi
 | Flux vidéo annoté | page Vision du dashboard, ou `http://127.0.0.1:8001/video` |
 | Sentinel Brain en direct | `docker logs -f snx-anomaly` |
 | Annonces vocales et mails | fenêtre « Sentinel-X notifications » ; mails : `SMTP_*` et `NOTIFY_TO` dans `infra\.env` (`ai/notify/README.md`) |
-| Boîtier simulé | `python tools\simulator.py --scenario all` (vrai boîtier : `firmware\sentinel_esp`) |
+| Boîtier simulé | `python tools\simulator.py --user esp-01 --password <esp-01> --scenario all` (vrai boîtier : `firmware\sentinel_esp`) |
+| Vérification de sécurité (preuve) | `python tools\verifier_securite.py --rapport docs\preuves\verification-securite.txt` ; depuis un autre PC : `--hote 192.168.137.1` |
 
 Le navigateur signale un certificat inconnu tant que `security\certs\ca.crt` n'est pas importé dans « Autorités de
 certification racines de confiance » (`certmgr.msc`) : c'est la CA locale créée par `configurer.py`.
 
-Progression dans `infra\.env` :
+Progression dans `infra\.env` (`python tools\configurer.py --mode tls` ou `--mode socle` fait le changement) :
 
 | Moment | `COMPOSE_FILE` | `MQTT_PORT` / `MQTT_TLS` | `COMPOSE_PROFILES` |
 |---|---|---|---|
@@ -233,6 +236,17 @@ ou sur un Raspberry Pi, ajouter `:docker-compose.linux.yml` (vision dans un cont
 
 Plan B sans webcam : `python ai\vision\tools\demo_video.py` puis
 `tools\demarrer.ps1 -Source ai\vision\data\demo.mp4`.
+
+## Tests
+
+| Quoi | Commande (racine du dépôt) | CI |
+|---|---|---|
+| Sentinel Brain | `python -m unittest discover -s ai/anomaly/tests` | oui |
+| Notifications | `python -m unittest discover -s ai/notify/tests` | oui |
+| Vision | `python -m unittest discover -s ai/vision/tests` | — (PyTorch) |
+| API : refus sans jeton, validation, WebSocket, messages MQTT invalides | `api/tests/test_api.py` (en-tête : PostgreSQL de test) | oui |
+| Dashboard : état, libellés, client de l'API | `cd dashboard ; npm test` | oui |
+| Sécurité de la stack en marche | `python tools\verifier_securite.py` | — (stack lancée) |
 
 ## Règles Git de l'équipe
 

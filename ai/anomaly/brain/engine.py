@@ -353,7 +353,14 @@ class SentinelBrain:
                 out["intrusion_confirmed"] = ("critical", f"{who} dans la zone, confirmée par le PIR "
                                               f"({_fmt(pir_gap)} s d'écart)", fac + [("pir_gap_s", pir_gap, 30.0)])
             else:
-                out["intrusion_suspected"] = ("warning", f"{who} dans la zone (vision seule, PIR silencieux)", fac)
+                longest = max(p.dwell_s for p in intruders)
+                if 0 < pol.vision_confirm_s <= longest:   # la vision suffit : personne inconnue restée N s
+                    out["intrusion_confirmed"] = ("critical", f"{who} dans la zone depuis {longest:.0f} s, "
+                                                  "confirmée par la vision (PIR silencieux)",
+                                                  fac + [("dwell_s", round(longest, 1), 30.0)])
+                else:
+                    out["intrusion_suspected"] = ("warning", f"{who} dans la zone (vision seule, PIR silencieux)",
+                                                  fac)
             longest = max(p.dwell_s for p in intruders)
             if longest >= pol.loitering_s:
                 out["loitering"] = ("warning", f"Présence prolongée dans la zone : {longest:.0f} s "

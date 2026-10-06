@@ -5,6 +5,10 @@
     python tools/configurer.py --afficher # réaffiche les mots de passe des comptes esp-01 et monitor
     python tools/configurer.py --refaire  # régénère tous les secrets (les anciens ne marchent plus)
     python tools/configurer.py --mail adresse@gmail.com   # mails d'alerte envoyés depuis et vers cette adresse Gmail
+    python tools/configurer.py --mode tls # MQTT chiffré (8883) ; --mode socle : 1883 en clair, mise au point seulement
+
+--refaire change les secrets qui circulent sur le réseau (comptes MQTT, clé d'API, jeton opérateur, certificats) et
+garde le reste : mot de passe de la base (sinon la base existante devient illisible), mails, mode et profils.
 
 - infra/.env : copie de infra/.env.example, chaque CHANGE_ME remplacé par un secret aléatoire, mode socle (1883),
   profils « app,ai » (API, dashboard, Sentinel Brain).
@@ -55,6 +59,30 @@ def read_env(path: Path) -> dict[str, str]:
         if m:
             values[m.group(1)] = m.group(2).split(" #")[0].strip()
     return values
+
+
+# Gardés par --refaire : la base existante est chiffrée par son mot de passe, les mails et le mode sont des choix
+KEEP = ("POSTGRES_DB", "POSTGRES_USER", "POSTGRES_PASSWORD", "COMPOSE_FILE", "MQTT_PORT", "MQTT_TLS", "MOSQUITTO_CONF",
+        "COMPOSE_PROFILES", "SITE_PROFILE_FILE", "SMTP_HOST", "SMTP_PORT", "SMTP_USER", "SMTP_PASSWORD", "SMTP_FROM",
+        "NOTIFY_TO", "VISION_SOURCE", "VISION_MODEL")
+MODES = {  # mode -> variables de infra/.env
+    "socle": {"COMPOSE_FILE": "docker-compose.yml:docker-compose.dev.yml", "MQTT_PORT": "1883", "MQTT_TLS": "false",
+              "MOSQUITTO_CONF": "mosquitto.tls.conf"},
+    "tls": {"COMPOSE_FILE": "docker-compose.yml", "MQTT_PORT": "8884", "MQTT_TLS": "true",
+            "MOSQUITTO_CONF": "mosquitto.tls.conf"},
+}
+
+
+def set_mode(mode: str) -> None:
+    env = MODES[mode]
+    if ":docker-compose.linux.yml" in read_env(ENV).get("COMPOSE_FILE", ""):
+        env = {**env, "COMPOSE_FILE": env["COMPOSE_FILE"] + ":docker-compose.linux.yml"}
+    set_env(env)
+    if mode == "tls":
+        print("[OK] mode TLS : MQTT chiffré sur 8883 (boîtiers, vision, notifications), 1883 fermé.")
+        print("     Le boîtier doit publier en TLS (firmware : port 8883 et ca.crt). Puis relancer tools\\demarrer.ps1.")
+    else:
+        print("[!!] mode socle : MQTT EN CLAIR sur 1883 (authentifié). Pour la mise au point du boîtier seulement.")
 
 
 def create_env() -> None:
@@ -140,6 +168,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--mail", metavar="ADRESSE", help="mails d'alerte : envoyés depuis et vers cette adresse (Gmail : "
                     "demande le mot de passe d'application)")
     ap.add_argument("--destinataires", metavar="LISTE", help="autres destinataires, séparés par des virgules")
+    ap.add_argument("--mode", choices=sorted(MODES), help="tls : MQTT chiffré (8883) ; socle : 1883 en clair")
     a = ap.parse_args(argv)
 
     if a.afficher:
@@ -151,7 +180,13 @@ def main(argv: list[str] | None = None) -> int:
               f"jeton opérateur (connexion au dashboard) : {v.get('OPERATOR_TOKEN', '?')}")
         return 0
 
-    if a.refaire or not ENV.exists():
+    if a.refaire and ENV.exists():
+        kept = {k: v for k, v in read_env(ENV).items() if k in KEEP and v}
+        create_env()
+        complete_env(read_env(ENV))
+        set_env(kept)
+        print("[OK] infra/.env : nouveaux comptes MQTT, clé d'API et jeton opérateur (base, mails et mode conservés)")
+    elif not ENV.exists():
         create_env()
         print("[OK] infra/.env créé (secrets aléatoires, MQTT 1883 en clair authentifié, profils app et ai)")
     elif "CHANGE_ME" in ENV.read_text(encoding="utf-8"):
@@ -168,6 +203,9 @@ def main(argv: list[str] | None = None) -> int:
 
     if a.mail:
         values = configure_mail(a.mail, a.destinataires)
+    if a.mode:
+        set_mode(a.mode)
+        values = read_env(ENV)
     missing = [var for var in ACCOUNTS.values() if not values.get(var)]
     if missing:
         print(f"[KO] infra/.env : variables vides {', '.join(missing)} (relancer avec --refaire)")
@@ -192,6 +230,9 @@ def main(argv: list[str] | None = None) -> int:
     else:
         print(f"\nMails d'alerte : vers {values.get('NOTIFY_TO', '?')}. Essai : cd ai\\notify puis "
               "..\\..\\.venv\\Scripts\\python.exe -m app.main --env ..\\..\\infra\\.env --tester")
+    if values.get("MQTT_TLS") != "true":
+        print("\n[!!] MQTT en clair (mode socle) : à réserver à la mise au point. Avant la démo : "
+              "python tools\\configurer.py --mode tls (firmware en TLS).")
     print("\nÉtape suivante : powershell -ExecutionPolicy Bypass -File tools\\demarrer.ps1")
     return 0
 

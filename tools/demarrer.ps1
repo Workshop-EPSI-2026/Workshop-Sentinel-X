@@ -59,7 +59,11 @@ Get-Content infra\.env | Where-Object { $_ -match '^\s*[A-Z_]+=' } | ForEach-Obj
 if ($envs['MQTT_TLS'] -eq 'true' -and -not (Test-Path security\certs\ca.crt)) {
   Fail "MQTT_TLS=true mais security\certs\ca.crt absent : certificats de Lisa (security\README.md)"
 }
-Write-Host "   profils : '$($envs['COMPOSE_PROFILES'])' · MQTT $($envs['MQTT_PORT']) TLS=$($envs['MQTT_TLS'])"
+Write-Host "   profils : '$($envs['COMPOSE_PROFILES'])' - MQTT $($envs['MQTT_PORT']) TLS=$($envs['MQTT_TLS'])"
+if ($envs['MQTT_TLS'] -ne 'true') {
+  Write-Host "   [!!] MQTT EN CLAIR (mode socle, port 1883) : reserve a la mise au point du boitier." -ForegroundColor Yellow
+  Write-Host "        Avant la demo : python tools\configurer.py --mode tls (firmware en TLS sur 8883)" -ForegroundColor Yellow
+}
 
 # ------------------------------------------------------------------ 2. Docker Desktop
 Step "2/4 Docker Desktop"
@@ -78,9 +82,32 @@ if ($LASTEXITCODE -ne 0) {
 }
 Write-Host "   Docker pret"
 
+# Ports publies par Sentinel-X : libres, ou deja tenus par nos propres conteneurs (snx-*)
+$ports = @(443) + $(if ($envs['MQTT_TLS'] -eq 'true') { 8883 } else { 1883 })
+foreach ($p in $ports) {
+  $others = @(docker ps --filter "publish=$p" --format '{{.Names}}' | Where-Object { $_ -and $_ -notlike 'snx-*' })
+  if ($others.Count) { Fail "port $p deja pris par le conteneur $($others -join ', ') : docker stop $($others -join ' ') puis relancer" }
+  $l = Get-NetTCPConnection -LocalPort $p -State Listen -ErrorAction SilentlyContinue | Select-Object -First 1
+  if ($l) {
+    $proc = (Get-Process -Id $l.OwningProcess -ErrorAction SilentlyContinue).ProcessName
+    if ($proc -and $proc -notmatch '^(com\.docker|docker|wslrelay|vpnkit)') {
+      Fail "port $p deja pris par le programme $proc (PID $($l.OwningProcess)) : le fermer puis relancer"
+    }
+  }
+}
+Write-Host "   ports libres : $($ports -join ', ')"
+
 # ------------------------------------------------------------------ 3. stack
-if ($envs['COMPOSE_PROFILES'] -match 'app' -and -not (Test-Path dashboard\dist\index.html)) {
-  Step "Dashboard : premiere compilation (une fois)"
+# Dashboard recompile s'il manque ou si ses sources sont plus recentes (mise a jour du depot)
+$dist = 'dashboard\dist\index.html'
+$stale = -not (Test-Path $dist)
+if (-not $stale) {
+  $built = (Get-Item $dist).LastWriteTime
+  $stale = [bool](Get-ChildItem dashboard\src, dashboard\index.html, dashboard\package-lock.json -Recurse -File |
+    Where-Object { $_.LastWriteTime -gt $built } | Select-Object -First 1)
+}
+if ($envs['COMPOSE_PROFILES'] -match 'app' -and $stale) {
+  Step "Dashboard : compilation"
   if (-not (Get-Command npm -ErrorAction SilentlyContinue)) { Fail "Node.js absent : installer.cmd, ou winget install OpenJS.NodeJS.LTS" }
   Push-Location dashboard
   npm ci --no-audit --no-fund
@@ -97,7 +124,19 @@ Pop-Location
 if ($code -ne 0) { Fail "docker compose a echoue (voir ci-dessus)" }
 docker kill -s HUP snx-mosquitto *> $null   # relit comptes (passwd) et droits (aclfile) sans couper les clients
 Start-Sleep 5
-Push-Location infra; docker compose ps --format "table {{.Name}}\t{{.Status}}"; Pop-Location
+Write-Host "   verification de sante des conteneurs" -NoNewline
+for ($i = 0; $i -lt 30; $i++) {
+  $st = @(docker ps -a --filter "name=snx-" --format '{{.Names}} {{.Status}}')
+  if (-not ($st -match 'starting')) { break }
+  Start-Sleep 3; Write-Host "." -NoNewline
+}
+Write-Host ""
+$bad = @($st | Where-Object { $_ -match 'unhealthy|Restarting|Exited' })
+foreach ($b in $st) {
+  if ($bad -contains $b) { Write-Host "   [KO] $b   ->  docker logs $(($b -split ' ')[0]) --tail 30" -ForegroundColor Red }
+  else { Write-Host "   [OK] $b" }
+}
+if ($bad.Count) { Write-Host "   Des conteneurs sont en panne : voir leurs journaux ci-dessus avant la demo." -ForegroundColor Red }
 
 # ------------------------------------------------------------------ 4. vision
 Stop-Services   # vision et notifications d'un lancement precedent

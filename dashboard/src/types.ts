@@ -170,6 +170,7 @@ export interface SiteProfile {
     forecast_horizon_min: number;
     correlation_window_s: number;
     loitering_s: number;
+    vision_confirm_s?: number;
     cooldown_s: number;
   };
   vision: {

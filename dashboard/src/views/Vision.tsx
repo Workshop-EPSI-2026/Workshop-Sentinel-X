@@ -9,7 +9,8 @@ export function Vision() {
   const now = useNow(5000);
   const [health, setHealth] = useState<SystemHealth | null>(null);
   const [videoError, setVideoError] = useState(false);
-  const url = source.videoUrl();
+  const [url, setUrl] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
   const vision = state.config?.profile.vision;
   const alerts = state.alerts
     .filter((a) => a.source === 'vision' || a.device_id.startsWith('cam') || a.type.startsWith('intrusion') || a.type === 'loitering')
@@ -21,6 +22,15 @@ export function Vision() {
   const camLevel: Level = !cam || !live || cam.masked || cam.frozen ? 'critical' : cam.low_light ? 'warning' : 'good';
   const inZone = cam ? cam.persons.filter((p) => p.in_zone) : [];
   const intruders = inZone.filter((p) => !p.authorized);
+
+  // Nouveau ticket à chaque (re)connexion du flux : il n'ouvre le flux que pendant 60 s
+  useEffect(() => {
+    let alive = true;
+    source.videoUrl().then((u) => alive && setUrl(u)).catch(() => alive && setVideoError(true));
+    return () => {
+      alive = false;
+    };
+  }, [source, attempt]);
 
   useEffect(() => {
     let alive = true;
@@ -42,8 +52,8 @@ export function Vision() {
             <img src={url} alt="Flux vidéo annoté : personnes détectées et zone interdite" onError={() => setVideoError(true)} />
           ) : (
             <div className="video-placeholder">
-              <p>{url ? 'Flux indisponible : vérifier que la vision tourne sur le PC serveur (tools\\demarrer.ps1).' : 'Pas de flux vidéo en mode démo.'}</p>
-              {url && <button type="button" className="btn" onClick={() => setVideoError(false)}>Réessayer</button>}
+              <p>{source.kind !== 'live' ? 'Pas de flux vidéo en mode démo.' : videoError ? 'Flux indisponible : vérifier que la vision tourne sur le PC serveur (tools\\demarrer.ps1).' : 'Connexion au flux…'}</p>
+              {source.kind === 'live' && videoError && <button type="button" className="btn" onClick={() => { setVideoError(false); setUrl(null); setAttempt((n) => n + 1); }}>Réessayer</button>}
             </div>
           )}
         </div>

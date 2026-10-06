@@ -107,8 +107,8 @@ plus vieille que 30 s ou dont l'`id` a déjà été vu.
 
 | Type | Domaine | Gravité usuelle | Quand |
 | --- | --- | --- | --- |
-| `intrusion_confirmed` | physical | critical | Personne sans badge dans la zone **et** PIR à moins de 5 s |
-| `intrusion_suspected` | physical | warning | Vision seule, PIR seul (caméra aveugle), ou personne non badgée accompagnée d'un agent |
+| `intrusion_confirmed` | physical | critical | Personne sans badge dans la zone **et** PIR à moins de 5 s, ou seule dans la zone depuis `vision_confirm_s` (3 s) |
+| `intrusion_suspected` | physical | warning | Vision seule pendant les `vision_confirm_s` premières secondes, PIR seul (caméra aveugle), ou personne non badgée accompagnée d'un agent |
 | `loitering` | physical | warning | Personne sans badge dans la zone depuis plus de `loitering_s` |
 | `presence_authorized` | physical | info | Agent badgé dans la zone, dans ses horaires |
 | `presence_to_verify` | physical | warning | Badge connu mais hors de ses horaires |
@@ -150,7 +150,7 @@ publie des scores mais aucune alerte.
 | POST | `/api/v1/commands` | Commande vers un boîtier | Opérateur |
 | GET / PUT | `/api/v1/config` | Profil de site | Opérateur |
 | GET | `/api/v1/score` | Scores courants | Opérateur |
-| GET | `/api/v1/health` | Santé du système | Libre (supervision) |
+| GET | `/api/v1/health` | Santé du système | Libre : `{"status": "ok"}` seulement ; détail avec le jeton opérateur |
 | WS | `/ws` | Temps réel | Opérateur |
 | GET | `/video` | Flux MJPEG annoté (relayé par nginx vers la vision du PC) | Opérateur |
 | GET | `/vision/health` | Santé de la vision | Libre |
@@ -188,7 +188,7 @@ finirait dans les journaux nginx). L'API répond `{"type": "ready"}`, ou ferme a
 | `GET /api/v1/config` | — | `{"version", "updated_at", "profile"}` ; `profile` = profil de site en JSON (structure de `config/site.example.yml`) |
 | `PUT /api/v1/config` | `{"profile": {…}}` | Même réponse que `GET`, version incrémentée |
 | `GET /api/v1/score` | — | Dernier score, ou `null` |
-| `GET /api/v1/health` | — | `{"ts", "server": {"cpu_pct", "mem_pct", "uptime_s"}, "services": [{"name", "ok", "detail"}], "vision": {"fps", "latency_ms"} ou null, "devices": [santé…]}` |
+| `GET /api/v1/health` (jeton opérateur) | — | `{"ts", "server": {"cpu_pct", "mem_pct", "uptime_s"}, "services": [{"name", "ok", "detail"}], "vision": {"fps", "latency_ms"} ou null, "devices": [santé…]}` |
 
 ## Points ouverts (docs/coachs.md)
 - Format imposé de `POST /api/v1/alerts` par les coachs : à confirmer. Si imposé, ce contrat s'y aligne.

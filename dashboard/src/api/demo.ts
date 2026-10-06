@@ -45,6 +45,7 @@ const DEFAULT_PROFILE: SiteProfile = {
     forecast_horizon_min: 10,
     correlation_window_s: 5,
     loitering_s: 20,
+    vision_confirm_s: 3,
     cooldown_s: 60,
   },
   vision: {
@@ -376,6 +377,6 @@ export function createDemoSource(): DataSource {
       };
     },
 
-    videoUrl: () => null,
+    videoUrl: async () => null,
   };
 }

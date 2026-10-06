@@ -17,7 +17,7 @@ export interface State {
   vision: Record<string, VisionState>;
 }
 
-type Action =
+export type Action =
   | { type: 'link'; link: LinkState }
   | { type: 'loadError'; message: string | null }
   | { type: 'config'; config: SiteConfig }
@@ -25,7 +25,7 @@ type Action =
   | { type: 'history'; deviceId: string; items: Telemetry[] }
   | WsMessage;
 
-const initial: State = {
+export const initial: State = {
   link: 'connecting', loadError: null, config: null, telemetry: {}, health: {}, status: {}, scores: [], alerts: [], lastEvent: null, vision: {},
 };
 
@@ -45,7 +45,7 @@ function addTelemetry(list: Telemetry[], t: Telemetry): Telemetry[] {
   return trim(next);
 }
 
-function reducer(s: State, a: Action): State {
+export function reducer(s: State, a: Action): State {
   switch (a.type) {
     case 'link':
       return { ...s, link: a.link };

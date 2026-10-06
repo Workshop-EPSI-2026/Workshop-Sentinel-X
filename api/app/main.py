@@ -2,12 +2,17 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
+import hmac
 import json
 import logging
+import secrets
+import time
 from contextlib import asynccontextmanager
 from typing import Annotated, Any
+from urllib.parse import parse_qs, urlsplit
 
-from fastapi import FastAPI, HTTPException, Query, Request, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, Header, HTTPException, Query, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse
 
 from .auth import Operator, Service, log_refusal, same
@@ -24,6 +29,8 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name
 log = logging.getLogger("sentinel.api")
 
 WS_AUTH_TIMEOUT_S = 5
+VIDEO_TICKET_S = 60          # un ticket vidéo ouvre le flux pendant 60 s (le flux ouvert continue ensuite)
+_VIDEO_KEY = secrets.token_bytes(32)   # propre à ce démarrage de l'API : un redémarrage invalide les tickets
 TELEMETRY_PAGE = 1000
 
 
@@ -63,9 +70,13 @@ def core_of(request: Request) -> Core:
 
 # ------------------------------------------------------------------------------------------------ supervision
 @app.get("/api/v1/health")
-async def health(request: Request) -> dict[str, Any]:
-    """Libre (supervision, healthcheck Docker)."""
-    return await core_of(request).health()
+async def health(request: Request, authorization: str | None = Header(default=None)) -> dict[str, Any]:
+    """Sans jeton (healthcheck Docker, curieux du réseau) : seulement « ok ». Le détail (processeur, mémoire,
+    services, boîtiers) renseigne un attaquant : il est réservé à l'opérateur."""
+    token = authorization[7:] if authorization and authorization.lower().startswith("bearer ") else ""
+    if token and same(token, request.app.state.settings.operator_token):
+        return await core_of(request).health()
+    return {"status": "ok", "ts": time.time()}
 
 
 # ------------------------------------------------------------------------------------------------- incidents
@@ -128,6 +139,30 @@ async def get_config(request: Request, _: Annotated[str, Operator]) -> dict[str,
 async def put_config(body: ConfigIn, request: Request, actor: Annotated[str, Operator]) -> dict[str, Any]:
     """Nouvelle version du profil de site, publiée en message conservé aux boîtiers et à Sentinel Brain."""
     return await core_of(request).save_config(body.profile, actor)
+
+
+# ------------------------------------------------------------------------------------------------- flux vidéo
+def _video_sig(exp: int) -> str:
+    return hmac.new(_VIDEO_KEY, f"video:{exp}".encode(), hashlib.sha256).hexdigest()[:32]
+
+
+@app.post("/api/v1/video/ticket")
+async def video_ticket(_: Annotated[str, Operator]) -> dict[str, Any]:
+    """Une balise <img> ne peut pas envoyer d'en-tête Authorization : le dashboard demande un ticket court et le met
+    dans l'URL du flux. Le jeton opérateur, lui, ne passe jamais dans une URL (journaux, historique du navigateur)."""
+    exp = int(time.time()) + VIDEO_TICKET_S
+    return {"ticket": f"{exp}.{_video_sig(exp)}", "expires": exp}
+
+
+@app.get("/api/v1/video/check", status_code=204)
+async def video_check(request: Request, x_original_uri: str | None = Header(default=None)) -> None:
+    """Appelé par nginx (auth_request) avant d'ouvrir /video : 204 si le ticket est valide, sinon 401."""
+    ticket = parse_qs(urlsplit(x_original_uri or "").query).get("ticket", [""])[0]
+    exp_txt, _, sig = ticket.partition(".")
+    if not (exp_txt.isdigit() and int(exp_txt) >= time.time() and same(sig, _video_sig(int(exp_txt)))):
+        ip = request.headers.get("x-real-ip") or "?"
+        await log_refusal(request.app.state.repo, ip, "flux vidéo : ticket absent ou expiré")
+        raise HTTPException(401, "Ticket vidéo absent ou expiré")
 
 
 # --------------------------------------------------------------------------------------------------- temps réel

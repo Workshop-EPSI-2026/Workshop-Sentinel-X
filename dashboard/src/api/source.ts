@@ -21,7 +21,8 @@ export interface DataSource {
   getScore(): Promise<Scores | null>;
   getHealth(): Promise<SystemHealth>;
   connect(onMessage: (m: WsMessage) => void, onState: (s: LinkState) => void): () => void;
-  videoUrl(): string | null;
+  /** URL du flux vidéo (avec un ticket de 60 s pour l'API réelle), null en démo. */
+  videoUrl(): Promise<string | null>;
   scenarios?: Scenario[];
   runScenario?(id: string): void;
 }

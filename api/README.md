@@ -74,7 +74,9 @@ jamais modifier une migration déjà appliquée. Elle s'applique au prochain dé
 | Routes des services | `X-API-Key: <API_KEY>` (`POST /api/v1/alerts`) |
 | WebSocket | Jeton dans le **premier message**, jamais dans l'URL ; fermeture 4401 sinon |
 | Démarrage | Refuse de démarrer si un jeton fait moins de 32 caractères ou contient `CHANGE_ME` |
-| Comparaisons | À temps constant |
+| Comparaisons | À temps constant ; la clé des services n'ouvre pas l'interface, et inversement |
+| Santé | Sans jeton : `{"status": "ok"}` seulement ; processeur, mémoire, services et boîtiers avec le jeton |
+| Flux vidéo | `POST /api/v1/video/ticket` (opérateur) donne un ticket signé de 60 s ; nginx le fait vérifier (`auth_request` vers `/api/v1/video/check`, inaccessible de l'extérieur) avant d'ouvrir `/video` |
 | Conteneur | Non root, système de fichiers en lecture seule, capacités retirées (`infra/docker-compose.yml`) |
 | MQTT | Compte `api` aux droits minimaux (`infra/mosquitto/aclfile`) ; TLS 8884 dès mardi |
 
@@ -86,7 +88,7 @@ Formats détaillés : `docs/contracts.md`. Documentation interactive : `https://
 
 | Route | Auth | Rôle |
 | --- | --- | --- |
-| `GET /api/v1/health` | libre | Santé des services, du PC serveur et des boîtiers |
+| `GET /api/v1/health` | libre : `{"status": "ok"}` ; détail avec le jeton opérateur | Santé des services, du PC serveur et des boîtiers |
 | `POST /api/v1/alerts` | clé d'API | Ingestion d'une alerte (vision, Brain) |
 | `GET /api/v1/alerts?status=&domain=` | opérateur | Incidents |
 | `PATCH /api/v1/alerts/{id}` | opérateur | Acquitter ou résoudre |
@@ -94,6 +96,7 @@ Formats détaillés : `docs/contracts.md`. Documentation interactive : `https://
 | `GET /api/v1/score` | opérateur | Dernier score de Brain |
 | `POST /api/v1/commands` | opérateur | Commande vers un boîtier (202) |
 | `GET` / `PUT /api/v1/config` | opérateur | Profil de site |
+| `POST /api/v1/video/ticket` | opérateur | Ticket de 60 s pour ouvrir `/video` (une balise `<img>` n'envoie pas d'en-tête) |
 | `WS /ws` | opérateur | Temps réel : `telemetry`, `event`, `health`, `status`, `score`, `alert` |
 
 ## Variables d'environnement
@@ -117,6 +120,16 @@ $env:MQTT_USER="api"; $env:MQTT_PASSWORD="<mdp>"
 $env:API_KEY="<32 caractères minimum>"; $env:OPERATOR_TOKEN="<32 caractères minimum>"
 $env:SITE_PROFILE="..\config\site.example.yml"
 python dev.py        # http://127.0.0.1:8000/api/docs
+```
+
+Tests (refus sans jeton, validation, tickets vidéo, WebSocket, messages MQTT invalides ou usurpés), sur une
+PostgreSQL de test jetable :
+
+```powershell
+docker run -d --name snx-pg-test -e POSTGRES_USER=sentinel -e POSTGRES_PASSWORD=testpass -e POSTGRES_DB=sentinel_test -p 55440:5432 postgres:16-alpine
+$env:SENTINEL_TEST_DATABASE_URL="postgresql://sentinel:testpass@127.0.0.1:55440/sentinel_test"
+pip install httpx ; python -m unittest discover -s api/tests -v      # depuis la racine du dépôt
+docker rm -f snx-pg-test
 ```
 
 `dev.py` est nécessaire sous Windows : la boucle d'événements par défaut d'uvicorn y est incompatible avec psycopg en

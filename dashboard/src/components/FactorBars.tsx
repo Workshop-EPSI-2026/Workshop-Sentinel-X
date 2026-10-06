@@ -1,7 +1,7 @@
 import { FACTOR, fmtNum } from '../format';
 import type { Factor } from '../types';
 
-function factorValue(v: Factor['value']): string {
+export function factorValue(v: Factor['value']): string {
   if (typeof v === 'number') return fmtNum(v, Number.isInteger(v) ? 0 : 2);
   if (typeof v === 'boolean') return v ? 'oui' : 'non';
   return v == null ? '—' : String(v).slice(0, 40);

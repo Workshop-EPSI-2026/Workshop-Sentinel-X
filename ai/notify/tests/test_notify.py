@@ -41,6 +41,14 @@ class AlertRulesTest(unittest.TestCase):
         self.assertIsNone(r.on_alert(alert(kind="presence_authorized", sev="info"), 0))
         self.assertIsNone(r.on_alert(alert(kind="camera_degraded", sev="warning"), 0))
 
+    def test_suspected_is_silent_by_default_confirmed_is_announced_once(self):
+        r = AlertRules(Settings())
+        self.assertIsNone(r.on_alert(alert(kind="intrusion_suspected", sev="warning"), 0))
+        self.assertEqual(r.on_alert(alert(), 3).spoken, "Intrus détecté.")
+        self.assertIsNone(r.on_alert(alert(), 10))
+        loud = AlertRules(Settings.from_profile({"notifications": {"types": ["intrusion_suspected"]}}))
+        self.assertIsNotNone(loud.on_alert(alert(kind="intrusion_suspected", sev="warning"), 0))
+
     def test_gas_alert_has_no_photo_and_shows_eta(self):
         n = AlertRules(Settings()).on_alert(alert(kind="gas_leak", device="esp-01", eta_min=3.0), 0)
         self.assertIsNone(n.photo)

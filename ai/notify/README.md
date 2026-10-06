@@ -5,7 +5,7 @@ lance avec la vision, dans une fenêtre réduite « Sentinel-X notifications ».
 
 | Quand | Annonce vocale | Mail aux propriétaires du site |
 | --- | --- | --- |
-| Intrusion confirmée / présumée, rôdeur | « Intrus détecté. », « Intrusion présumée. », « Personne suspecte dans la zone. » | Photo de la caméra **au moment de l'alerte**, date, heure, explication de Brain |
+| Intrus (personne non autorisée dans la zone depuis 3 s, ou vue + PIR), rôdeur | « Intrus détecté. », « Personne suspecte dans la zone. » (« Intrusion présumée. » si ajoutée dans `types`) | Photo de la caméra **au moment de l'alerte**, date, heure, explication de Brain |
 | Badge hors de ses horaires | « Badge présenté hors de ses horaires. » | Photo, nom du badge, horaires |
 | Caméra masquée | « Caméra masquée. » | **Dernière image avant le masquage** (montre souvent qui l'a masquée) |
 | Caméra rétablie | « Caméra rétablie. » | Durée du masquage, image actuelle |

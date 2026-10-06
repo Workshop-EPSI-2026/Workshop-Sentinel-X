@@ -185,6 +185,7 @@ class Brain(Strict):
     forecast_horizon_min: int = Field(ge=1, le=120)
     correlation_window_s: int = Field(ge=1, le=60)
     loitering_s: int = Field(ge=1, le=600)
+    vision_confirm_s: float = Field(default=3, ge=0, le=60)
     cooldown_s: int = Field(ge=0, le=3600)
     camera_timeout_s: int = Field(default=15, ge=3, le=600)
     sabotage_window_s: int = Field(default=60, ge=5, le=600)

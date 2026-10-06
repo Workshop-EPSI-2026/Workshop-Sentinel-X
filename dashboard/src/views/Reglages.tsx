@@ -105,6 +105,7 @@ export function Reglages() {
         ))}
         <Slider label="Bonus de nuit" value={draft.brain.night_profile_boost} max={0.5} onChange={(v) => edit((p) => { p.brain.night_profile_boost = v; })} />
         <div className="form-grid">
+          <NumberInput label="Intrus confirmé sans PIR après (s ; 0 = PIR exigé)" value={draft.brain.vision_confirm_s ?? 3} step={1} onChange={(v) => edit((p) => { p.brain.vision_confirm_s = v; })} />
           <NumberInput label="Rôdeur après (s)" value={draft.brain.loitering_s} step={5} onChange={(v) => edit((p) => { p.brain.loitering_s = v; })} />
           <NumberInput label="Délai entre deux notifications (s)" value={draft.brain.cooldown_s} step={10} onChange={(v) => edit((p) => { p.brain.cooldown_s = v; })} />
           <NumberInput label="Horizon de prévision (min)" value={draft.brain.forecast_horizon_min} step={1} onChange={(v) => edit((p) => { p.brain.forecast_horizon_min = v; })} />

@@ -10,6 +10,7 @@ cd dashboard
 npm install
 npm run dev          # http://localhost:5173 ; /api, /ws et /video relayés vers https://localhost (nginx)
 npm run build        # dist/ servi par nginx : https://192.168.137.1 (ou https://localhost sur le PC serveur)
+npm test             # état temps réel, libellés, client de l'API (jeton jamais dans une URL)
 ```
 
 Pour viser un autre serveur pendant le développement : `$env:VITE_API_TARGET="https://192.168.137.1"; npm run dev`.
@@ -42,7 +43,9 @@ Secours le jour de la soutenance si l'API ou le boîtier flanche.
 Jeton opérateur (`OPERATOR_TOKEN` de `infra/.env`), gardé dans `sessionStorage` (effacé à la fermeture de l'onglet).
 Formats attendus de chaque route et du WebSocket : `docs/contracts.md`, section « Formats attendus par le dashboard ».
 Toutes les vues ne parlent qu'à l'interface `DataSource` (`src/api/source.ts`) : `live.ts` pour l'API, `demo.ts` pour
-le simulateur. Le WebSocket se reconnecte seul (1 s, puis jusqu'à 15 s).
+le simulateur. Le WebSocket se reconnecte seul (1 s, puis jusqu'à 15 s). Le flux vidéo s'ouvre avec un ticket de 60 s
+demandé à l'API (`POST /api/v1/video/ticket`), jamais avec le jeton. nginx impose une CSP stricte : aucune ressource
+extérieure (police, script, image) n'est chargée.
 
 ## Vues
 

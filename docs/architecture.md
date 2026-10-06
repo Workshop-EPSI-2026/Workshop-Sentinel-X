@@ -236,8 +236,8 @@ Le domaine physique d'un boîtier inclut ce que voit la caméra. Règles de corr
 
 | Incident | Condition |
 | --- | --- |
-| Intrusion confirmée | Personne sans badge autorisé dans la zone **et** PIR à moins de 5 s |
-| Intrusion présumée | Vision seule (PIR silencieux), PIR seul quand la caméra est aveugle, ou personne non badgée accompagnée d'un agent |
+| Intrusion confirmée | Personne sans badge autorisé dans la zone **et** PIR à moins de 5 s, **ou** seule dans la zone depuis `vision_confirm_s` (3 s), même sans PIR |
+| Intrusion présumée | Vision seule pendant moins de `vision_confirm_s` (3 s ; au-delà : intrusion confirmée), PIR seul quand la caméra est aveugle, ou personne non badgée accompagnée d'un agent |
 | Rôdeur | Personne sans badge dans la zone depuis plus de 20 s |
 | Présence autorisée | Agent badgé dans la zone, dans ses horaires (information, pas d'alarme) |
 | Présence à vérifier | Badge connu mais hors de ses horaires |

@@ -81,6 +81,31 @@ jobs:
       - name: Tests unitaires et scénarios simulés
         run: python -m unittest discover -s ai/anomaly/tests -v
 
+  api:
+    name: API (tests de sécurité et de contrat)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: sentinel
+          POSTGRES_PASSWORD: testpass
+          POSTGRES_DB: sentinel_test
+        ports: ["55440:5432"]
+        options: >-
+          --health-cmd "pg_isready -U sentinel" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      SENTINEL_TEST_DATABASE_URL: postgresql://sentinel:testpass@127.0.0.1:55440/sentinel_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version-file: .python-version
+      - run: pip install -r api/requirements.txt "httpx==0.28.1"
+      - name: Refus sans jeton, validation, WebSocket, messages MQTT invalides
+        run: python -m unittest discover -s api/tests -v
+
   notify:
     name: Notifications (tests)
     runs-on: ubuntu-latest
@@ -115,7 +140,7 @@ jobs:
         run: 'echo "Pas encore de firmware/platformio.ini, étape ignorée."'
 
   dashboard:
-    name: Dashboard (build)
+    name: Dashboard (types, build, tests)
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -131,5 +156,6 @@ jobs:
         run: |
           if [ -f package-lock.json ]; then npm ci; else npm install; fi
           npm run build
+          npm test
       - if: steps.check.outputs.present != 'true'
         run: 'echo "Pas encore de dashboard/package.json, étape ignorée."'

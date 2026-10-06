@@ -19,7 +19,9 @@ PHRASES: dict[str, tuple[str, str]] = {
     "jamming_suspected": ("Brouillage du Wi-Fi détecté.", "Brouillage suspecté"),
     "thermal_drift": ("Température anormale.", "Dérive de température"),
 }
-DEFAULT_TYPES = ("intrusion_confirmed", "intrusion_suspected", "loitering", "presence_to_verify", "sabotage",
+# « Intrusion présumée » n'est pas annoncée par défaut : 3 s plus tard Brain confirme (vision seule ou PIR) et c'est
+# « Intrus détecté » qui part, une seule fois. L'ajouter dans notifications.types pour l'entendre aussi.
+DEFAULT_TYPES = ("intrusion_confirmed", "loitering", "presence_to_verify", "sabotage",
                  "fire_risk", "gas_leak", "cyber_attack", "jamming_suspected")
 PHYSICAL_TYPES = {"intrusion_confirmed", "intrusion_suspected", "loitering", "presence_to_verify", "sabotage"}
 RANK = {"info": 0, "warning": 1, "critical": 2}
