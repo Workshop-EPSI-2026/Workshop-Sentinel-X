@@ -28,7 +28,7 @@ Entrées analogiques utilisables avec le Wi-Fi actif : **GPIO 1 à 10** uniqueme
 | --- | --- |
 | 1 VSS | GND |
 | 2 VDD | 5V |
-| 3 V0 (contraste) | Curseur d'un potentiomètre 10 kΩ entre 5V et GND (à défaut : 1 à 2,2 kΩ vers GND) |
+| 3 V0 (contraste) | Résistance fixe entre V0 et GND, environ 1 kΩ (entre 470 Ω et 2,2 kΩ selon l'écran) |
 | 4 RS | GPIO 8 |
 | 5 RW | **GND** (écriture seule : l'écran ne renvoie jamais de 5 V vers l'ESP32-S3) |
 | 6 E | GPIO 9 |
@@ -38,7 +38,11 @@ Entrées analogiques utilisables avec le Wi-Fi actif : **GPIO 1 à 10** uniqueme
 | 16 K (rétroéclairage −) | GND |
 
 Souder une barrette de 16 broches sur l'écran. Alimenté en 5 V, il accepte les niveaux 3,3 V de l'ESP32-S3.
-Écran vide ou rangée de carrés noirs : régler le contraste (V0) avant de soupçonner le code.
+Réglage du contraste sans potentiomètre : on change la résistance entre V0 et GND.
+- **Rangée de carrés noirs** (contraste trop fort) : prendre une résistance **plus grande** (2,2 kΩ, puis 4,7 kΩ).
+- **Écran allumé mais texte invisible ou très pâle** : prendre une résistance **plus petite** (470 Ω, ou V0 directement à GND).
+
+Vérifier ces deux cas avant de soupçonner le code. Noter la valeur retenue dans « Mesures relevées ».
 
 Toutes les masses (GND) sont communes. Le 5 V vient de la broche **5Vin** de la carte, alimentée par l'USB du PC serveur (ou un chargeur 5 V).
 
@@ -58,3 +62,4 @@ Toutes les masses (GND) sont communes. Le 5 V vient de la broche **5Vin** de la 
 | MQ-2 au repos après préchauffage (mV) | |
 | Tactile au repos / main posée | |
 | Adresse MAC de l'ESP32-S3 | |
+| Résistance de contraste du LCD (V0 → GND) | |

@@ -35,7 +35,7 @@ Principes : **autonomie à trois niveaux**, **sécurité dès mardi**, **aucune 
 | MQ-2 (module) | Sortie analogique en millivolts calibrés et ratio par rapport à la ligne de base apprise ; sortie DO en seuil matériel par interruption | Chauffe, préchauffage nécessaire, sortie jusqu'à 5 V, pas de mesure en ppm sans gaz étalon | Ponts diviseurs, ligne de base apprise au démarrage, on parle de « ratio » et non de ppm |
 | PIR HW-416-B | Détection de mouvement jusqu'à environ 7 m, comptage d'événements par minute | Temps mort, sensible à la chaleur | Cavalier en mode H (redéclenchable), sensibilité au maximum, délai au minimum ; fusion avec la vision |
 | PC serveur Windows 11 | Serveur complet, point d'accès Wi-Fi, YOLO sur le processeur du PC | Veille et mises à jour Windows, webcam inaccessible depuis Docker Desktop, point d'accès à réactiver après redémarrage | Veille désactivée, mises à jour suspendues, vision lancée hors Docker, redémarrage répété |
-| Webcam USB, buzzer, LEDs, LCD 1602 | Vision ; alarme sonore et visuelle ; affichage de l'état sur le boîtier | LCD sans module I2C : 6 broches, contraste à régler | Mode 4 bits, RW à la masse, potentiomètre sur V0 |
+| Webcam USB, buzzer, LEDs, LCD 1602 | Vision ; alarme sonore et visuelle ; affichage de l'état sur le boîtier | LCD sans module I2C : 6 broches, contraste à régler | Mode 4 bits, RW à la masse, résistance fixe de contraste sur V0 |
 
 Idée clé : **une feuille de cuivre collée à l'intérieur du couvercle, reliée à une entrée tactile de l'ESP32-S3,
 devient un détecteur d'effraction gratuit**. Toute manipulation du boîtier est détectée sans composant supplémentaire.
@@ -80,7 +80,7 @@ L'opérateur ne voit que nginx, en HTTPS.
 | MQ-2 DO | GPIO 6 | — | Pont 10 kΩ / 15 kΩ (≈ 3 V), seuil matériel par interruption |
 | Effraction (tactile) | GPIO 7 (T7) | — | Feuille de cuivre dans le couvercle, seuil auto-calibré |
 | LCD 1602 RS / E | GPIO 8 / 9 | 5 V | Mode 4 bits, RW à la masse |
-| LCD 1602 D4 à D7 | GPIO 13 à 16 | — | Contraste par potentiomètre sur V0 |
+| LCD 1602 D4 à D7 | GPIO 13 à 16 | — | Contraste par résistance fixe V0 → GND (≈ 1 kΩ) |
 | Buzzer | GPIO 10 | — | Alarme sonore locale |
 | LED verte / rouge | GPIO 11 / 12 | — | Résistance série |
 | LED RGB intégrée | GPIO 48 | — | Voyant d'état (38 sur certaines cartes) |
