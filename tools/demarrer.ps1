@@ -16,6 +16,7 @@
 param(
   [string]$Source,
   [switch]$SansVision,
+  [switch]$SansNotifications,
   [switch]$Arreter
 )
 
@@ -25,15 +26,23 @@ Set-Location $Root
 function Step($msg) { Write-Host "`n== $msg" -ForegroundColor Cyan }
 function Fail($msg) { Write-Host "   $msg" -ForegroundColor Red; exit 1 }
 
-function Stop-Vision {
+function Stop-Services {
+  # vision et notifications : processus python lances par ce script (« -m app.main --env ...infra\.env »)
   Get-CimInstance Win32_Process -Filter "Name = 'python.exe'" |
     Where-Object { $_.CommandLine -like '*-m app.main*' -and $_.CommandLine -like '*infra*.env*' } |
-    ForEach-Object { Stop-Process -Id $_.ProcessId -Force; Write-Host "   vision arretee (processus $($_.ProcessId))" }
+    ForEach-Object { Stop-Process -Id $_.ProcessId -Force; Write-Host "   service PC arrete (processus $($_.ProcessId))" }
+}
+
+function Start-PcService($name, $dir, $extra) {
+  $py = Join-Path $Root '.venv\Scripts\python.exe'
+  $cmd = "Set-Location '$Root\$dir'; `$host.UI.RawUI.WindowTitle = 'Sentinel-X $name'; " +
+         "& '$py' -m app.main --env '$Root\infra\.env' $extra"
+  Start-Process powershell.exe -ArgumentList '-NoExit', '-Command', $cmd -WindowStyle Minimized
 }
 
 if ($Arreter) {
   Step "Arret"
-  Stop-Vision
+  Stop-Services
   Push-Location infra; docker compose stop; Pop-Location
   exit 0
 }
@@ -70,19 +79,30 @@ if ($LASTEXITCODE -ne 0) {
 Write-Host "   Docker pret"
 
 # ------------------------------------------------------------------ 3. stack
+if ($envs['COMPOSE_PROFILES'] -match 'app' -and -not (Test-Path dashboard\dist\index.html)) {
+  Step "Dashboard : premiere compilation (une fois)"
+  if (-not (Get-Command npm -ErrorAction SilentlyContinue)) { Fail "Node.js absent : installer.cmd, ou winget install OpenJS.NodeJS.LTS" }
+  Push-Location dashboard
+  npm ci --no-audit --no-fund
+  if ($LASTEXITCODE -eq 0) { npm run build }
+  $code = $LASTEXITCODE
+  Pop-Location
+  if ($code -ne 0) { Fail "compilation du dashboard impossible (voir ci-dessus)" }
+}
 Step "3/4 Stack (docker compose)"
 Push-Location infra
 docker compose up -d --build
 $code = $LASTEXITCODE
 Pop-Location
 if ($code -ne 0) { Fail "docker compose a echoue (voir ci-dessus)" }
+docker kill -s HUP snx-mosquitto *> $null   # relit comptes (passwd) et droits (aclfile) sans couper les clients
 Start-Sleep 5
 Push-Location infra; docker compose ps --format "table {{.Name}}\t{{.Status}}"; Pop-Location
 
 # ------------------------------------------------------------------ 4. vision
+Stop-Services   # vision et notifications d'un lancement precedent
 if (-not $SansVision) {
   Step "4/4 Vision (webcam, hors Docker)"
-  Stop-Vision
   $py = Join-Path $Root '.venv\Scripts\python.exe'
   if (-not (Test-Path $py)) { Fail ".venv absent : lancer installer.cmd" }
   & $py -c "import ultralytics, cv2" 2>$null
@@ -100,9 +120,19 @@ if (-not $SansVision) {
   } catch { Write-Host "   vision pas encore prete (premier lancement : telechargement du modele)" -ForegroundColor Yellow }
 }
 
+# ------------------------------------------------------------------ 5. notifications (haut-parleurs et mails : sur le PC)
+if (-not $SansNotifications) {
+  Step "Notifications (voix, mails)"
+  Start-PcService 'notifications' 'ai\notify' ''
+  if ($envs['SMTP_HOST']) { Write-Host "   annonces vocales et mails vers $($envs['NOTIFY_TO'])" }
+  else { Write-Host "   annonces vocales actives ; mails : remplir SMTP_* et NOTIFY_TO dans infra\.env" -ForegroundColor Yellow }
+  Write-Host "   essai : cd ai\notify ; ..\..\.venv\Scripts\python.exe -m app.main --env ..\..\infra\.env --tester"
+}
+
 Write-Host "`nSentinel-X demarre." -ForegroundColor Green
 if ($envs['COMPOSE_PROFILES'] -match 'app') {
   Write-Host "Dashboard : https://localhost  (depuis le reseau du point d'acces : https://192.168.137.1)"
+  Write-Host "   jeton operateur pour se connecter : python tools\configurer.py --afficher"
   Start-Process "https://localhost"
 }
 if (-not $SansVision) { Write-Host "Video annotee : http://127.0.0.1:8001/video" }

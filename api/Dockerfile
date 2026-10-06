@@ -1,4 +1,4 @@
-# Image api — Sentinel-X (amd64 : PC sous Docker Desktop ; arm64 : Raspberry Pi 5 en portage)
+# Image api — Sentinel-X (amd64 PC serveur sous Docker Desktop, arm64 possible)
 FROM python:3.12-slim
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \

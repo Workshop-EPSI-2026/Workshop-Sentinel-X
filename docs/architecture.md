@@ -37,7 +37,7 @@ démo**, **chaque alerte expliquée**, **un seul fichier de configuration par si
 | PIR HW-416-B | Mouvement jusqu'à ~7 m, comptage par minute | Temps mort, sensible à la chaleur | Cavalier H, fusion avec la vision |
 | PC portable (serveur) | Processeur x86 : YOLOv8n en PyTorch à ~40 ms par image (320 px) ; mémoire largement suffisante ; point d'accès Wi-Fi intégré | Docker Desktop n'accède pas à la webcam ; mises à jour et veille de Windows | Vision hors Docker ; mode Avion du Wi-Fi désactivé, veille désactivée pendant la démo |
 | Webcam USB (sur le PC) | Vision ; contrôle d'intégrité | Éclairage, champ | Zone et seuils réglables, PIR en relais quand l'image est mauvaise |
-| OLED, buzzer, LEDs | Affichage ; alarme sonore et visuelle | À confirmer dans le kit | Sans eux, la LED RGB intégrée sert de voyant |
+| LCD 1602, buzzer, LEDs | Affichage de l'état sur le boîtier ; alarme sonore et visuelle | LCD sans module I2C : 6 broches, contraste à régler | Mode 4 bits, RW à la masse, résistance fixe de contraste sur V0 |
 
 Idée clé : **une feuille de cuivre collée à l'intérieur du couvercle, reliée à une entrée tactile de l'ESP32-S3,
 devient un détecteur d'effraction gratuit**.
@@ -95,7 +95,8 @@ deux. L'opérateur ne voit que nginx, en HTTPS.
 | MQ-2 AO | GPIO 1 (ADC1) | 5 V | Pont 10 kΩ / 10 kΩ (max 2,5 V), moyenne de 16 lectures en mV |
 | MQ-2 DO | GPIO 6 | — | Pont 10 kΩ / 15 kΩ (≈ 3 V), seuil matériel par interruption |
 | Effraction (tactile) | GPIO 7 (T7) | — | Feuille de cuivre dans le couvercle, seuil auto-calibré |
-| OLED SDA / SCL | GPIO 8 / 9 | 3,3 V | Si disponible |
+| LCD 1602 RS / E | GPIO 8 / 9 | 5 V | Mode 4 bits, RW à la masse |
+| LCD 1602 D4 à D7 | GPIO 13 à 16 | — | Contraste par résistance fixe V0 → GND (≈ 1 kΩ) |
 | Buzzer | GPIO 10 | — | Si disponible |
 | LED verte / rouge | GPIO 11 / 12 | — | Résistance série, si disponibles |
 | LED RGB intégrée | GPIO 48 | — | Voyant d'état (38 sur certaines cartes) |
@@ -295,7 +296,7 @@ incidents, export CSV.
 
 ## 11. Fabrication et vidéo
 
-Le boîtier n'abrite plus que l'ESP32-S3 et ses capteurs : plus petit, alimenté en USB-C. Façade : fenêtre OLED (si
+Le boîtier n'abrite plus que l'ESP32-S3 et ses capteurs : plus petit, alimenté en USB-C. Façade : fenêtre du LCD 1602 (si
 disponible), dôme PIR, LED d'état visible, gravure laser. Couvercle : feuille de cuivre tactile. Aération pour le MQ-2,
 DHT11 éloigné de lui. Le PC et la webcam sont posés à côté, la webcam orientée vers la zone surveillée.
 
