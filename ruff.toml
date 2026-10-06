@@ -1,0 +1,7 @@
+# Règles Python communes : VS Code (extension Ruff), postes et CI appliquent les mêmes.
+target-version = "py312"
+line-length = 120
+
+[lint]
+select = ["E", "F", "W", "I", "B", "UP"]
+ignore = ["E501"]
