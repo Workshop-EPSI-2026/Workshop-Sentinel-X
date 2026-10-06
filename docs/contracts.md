@@ -93,5 +93,37 @@ plus vieille que 30 s ou dont l'`id` a déjà été vu.
 | WS | `/ws` | Temps réel | Opérateur |
 | GET | `/video` | Flux MJPEG annoté | Opérateur |
 
+## Formats attendus par le dashboard
+
+Proposition issue du dashboard (`dashboard/src/types.ts`), à confirmer à l'implémentation de l'API.
+Le mode démo du dashboard simule exactement ces formats.
+
+**Authentification opérateur** : en-tête `Authorization: Bearer <OPERATOR_TOKEN>` ; réponse 401 si le jeton est refusé.
+Exception : `/video?token=<OPERATOR_TOKEN>`, car une balise `<img>` ne peut pas envoyer d'en-tête.
+
+**WebSocket `/ws`** : le client envoie d'abord `{"type": "auth", "token": "…"}` (jamais de jeton dans l'URL, qui
+finirait dans les journaux nginx). L'API répond `{"type": "ready"}`, ou ferme avec le code 4401. Elle pousse ensuite
+`{"type": <type>, "data": {…}}` :
+
+| `type` | `data` |
+| --- | --- |
+| `telemetry`, `event`, `health`, `status` | Message MQTT du boîtier, tel quel |
+| `score` | `{ts, global, environment, physical, cyber}` (contenu de `sentinel/brain/score`, scores 0 à 100) |
+| `alert` | Incident complet, à chaque création ou mise à jour |
+
+**Incident** (réponse de `GET /api/v1/alerts`, élément de liste) : les champs de l'alerte ci-dessus, plus `id` (entier),
+`status` (`open`, `acknowledged`, `resolved`) et `count` (répétitions regroupées).
+
+| Route | Corps envoyé | Réponse |
+| --- | --- | --- |
+| `GET /api/v1/alerts` | — | Liste d'incidents |
+| `PATCH /api/v1/alerts/{id}` | `{"status": "acknowledged"}` ou `"resolved"` | Incident mis à jour |
+| `GET /api/v1/telemetry?device=&from=` | — | `{"items": [télémétrie…], "next": <from suivant> ou null}`, trié par `ts` croissant |
+| `POST /api/v1/commands` | `{"device_id": "esp-01", "cmd": "alarm", "on": true}` (champs de la commande) | 202 ou 204 ; l'API ajoute `id` et `ts` avant publication |
+| `GET /api/v1/config` | — | `{"version", "updated_at", "profile"}` ; `profile` = profil de site en JSON (structure de `config/site.example.yml`) |
+| `PUT /api/v1/config` | `{"profile": {…}}` | Même réponse que `GET`, version incrémentée |
+| `GET /api/v1/score` | — | Dernier score, ou `null` |
+| `GET /api/v1/health` | — | `{"ts", "server": {"cpu_pct", "mem_pct", "uptime_s"}, "services": [{"name", "ok", "detail"}], "vision": {"fps", "latency_ms"} ou null, "devices": [santé…]}` |
+
 ## Points ouverts (docs/coachs.md)
 - Format imposé de `POST /api/v1/alerts` par les coachs : à confirmer. Si imposé, ce contrat s'y aligne.
