@@ -155,7 +155,7 @@ services:
     read_only: true
     tmpfs:
       - /tmp
-      - /etc/nginx/conf.d             # configuration générée au démarrage depuis templates/
+      - /etc/nginx/conf.d:uid=101,gid=101,mode=0755   # conf générée au démarrage depuis templates/ (uid 101 = nginx ; Docker Desktop crée sinon le tmpfs en root 775)
     ports:
       - "443:8443"                    # HTTPS + WSS — seul port web publié
     environment:
