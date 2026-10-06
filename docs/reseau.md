@@ -18,8 +18,8 @@ Ce PC est à la fois le point d'accès Wi-Fi, l'hôte Docker (Docker Desktop, mo
 
 Le point d'accès Windows ne permet pas de choisir le canal ni de réserver une adresse par MAC.
 Il ne démarre pas tout seul au redémarrage du PC : il faut le réactiver à la main, avant la stack.
-À tester lundi : si l'interrupteur est grisé sans Internet, rester connecté au réseau de l'école pendant la démo
-(le point d'accès reste notre réseau isolé ; l'ESP32-S3 n'a pas besoin d'Internet).
+Internet est disponible (confirmé par les coachs) : le PC reste connecté au réseau de l'école et partage cette connexion
+par le point d'accès. L'ESP32-S3 n'a pas besoin d'Internet, et la démo doit tourner même si la connexion de l'école coupe.
 
 ## Plan d'adressage
 

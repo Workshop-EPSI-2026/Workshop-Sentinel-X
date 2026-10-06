@@ -17,8 +17,8 @@ Entrées analogiques utilisables avec le Wi-Fi actif : **GPIO 1 à 10** uniqueme
 | MQ-2 | DO | GPIO 6 | — | **Pont 10 kΩ / 15 kΩ** (≈ 3 V) ; 15 kΩ = 10 kΩ + 4,7 kΩ en série si besoin |
 | Effraction | feuille de cuivre | GPIO 7 (T7) | — | Fil court vers la feuille collée dans le couvercle |
 | OLED SSD1306 | SDA / SCL | GPIO 8 / 9 | 3V3 | Si disponible |
-| Buzzer actif | + | GPIO 10 | — | Si disponible |
-| LED verte / rouge | anode | GPIO 11 / 12 | — | Résistance 220 Ω en série, si disponibles |
+| Buzzer actif | + | GPIO 10 | — | Alarme sonore locale |
+| LED verte / rouge | anode | GPIO 11 / 12 | — | Résistance 220 Ω en série |
 | LED RGB intégrée | — | GPIO 48 | — | Voyant d'état (GPIO 38 sur certaines révisions) |
 
 Toutes les masses (GND) sont communes. Le 5 V vient de la broche **5Vin** de la carte, alimentée par l'USB du PC serveur (ou un chargeur 5 V).
@@ -30,7 +30,7 @@ Toutes les masses (GND) sont communes. Le 5 V vient de la broche **5Vin** de la 
 3. PIR seul : vérifier le réglage des potentiomètres et du cavalier.
 4. MQ-2 : brancher tout de suite (préchauffage), vérifier au multimètre que GPIO 1 ne dépasse pas 2,5 V.
 5. Effraction : valeur tactile au repos, puis main posée sur la feuille ; noter les deux valeurs.
-6. OLED, buzzer, LEDs si disponibles.
+6. Buzzer et LEDs ; OLED si disponible.
 
 ## Mesures relevées
 

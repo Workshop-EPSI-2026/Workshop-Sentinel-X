@@ -9,7 +9,7 @@
 #define PIN_TAMPER_TOUCH 7    // T7, feuille de cuivre dans le couvercle
 #define PIN_I2C_SDA      8    // OLED (si disponible)
 #define PIN_I2C_SCL      9
-#define PIN_BUZZER       10   // si disponible
-#define PIN_LED_GREEN    11   // si disponible
-#define PIN_LED_RED      12   // si disponible
+#define PIN_BUZZER       10   // buzzer actif (alarme locale)
+#define PIN_LED_GREEN    11   // LED verte
+#define PIN_LED_RED      12   // LED rouge
 #define PIN_RGB_STATUS   48   // LED RGB intégrée (38 sur certaines révisions)

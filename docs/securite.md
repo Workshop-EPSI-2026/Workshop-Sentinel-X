@@ -15,4 +15,10 @@
 Démarrage sécurisé et chiffrement de la flash de l'ESP32-S3 : fusibles irréversibles. Présentés comme étape d'industrialisation.
 
 ## Règles d'engagement du pentest
-_À compléter avec la réponse des coachs (docs/coachs.md)._
+Réponse des coachs du 06/10/2026 : **attaques Wi-Fi et DoS autorisées** (docs/coachs.md).
+
+- Nous pouvons tester le Wi-Fi et la tenue en charge des autres tables, dans le cadre fixé par les coachs.
+- Nous devons nous attendre aux mêmes attaques : brouillage ou désauthentification Wi-Fi, rafales sur l'API et sur MQTT.
+- Parades : garde locale et tampon PSRAM du boîtier (alarme sans réseau, aucune mesure perdue), limitation de débit
+  nginx (429), comptes MQTT sans anonyme, et chaque attaque transformée en incident cyber par Sentinel Brain
+  (brouillage présumé, rafale 401/429, accès MQTT refusés).

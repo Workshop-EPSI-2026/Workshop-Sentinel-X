@@ -478,7 +478,7 @@ taches:
   detail:
   - 'Sur le PC serveur : Point d’accès mobile Windows, bande 2,4 GHz, WPA2, mise en veille automatique désactivée.'
   - 'Adresse fixe du PC : 192.168.137.1 ; ESP32-S3 en DHCP, adresse et MAC relevées dans docs/reseau.md.'
-  - Vérifier le fonctionnement sans Internet (sinon rester connecté au réseau de l’école).
+  - Partager la connexion Internet de l’école (confirmée par les coachs) ; vérifier que la démo tourne si elle coupe.
   - Tester avec un téléphone, puis avec l’ESP32-S3 de Momo.
   fini_quand: L’ESP se connecte au point d’accès du PC et joint 192.168.137.1.
   fait: false
