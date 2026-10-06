@@ -1,0 +1,67 @@
+# =============================================================================
+#  Surcharge Linux / Raspberry Pi 5 : la vision tourne AUSSI dans un conteneur, avec la webcam.
+#  Sous Windows (Docker Desktop), ne pas l'utiliser : la webcam n'est pas accessible aux conteneurs,
+#  la vision tourne sur le PC (tools\demarrer.ps1).
+#
+#  Activation dans .env :  COMPOSE_FILE=docker-compose.yml:docker-compose.linux.yml
+#                          COMPOSE_PROFILES=app,ai
+#  Modèle conseillé sur Raspberry Pi : VISION_MODEL=yolov8n_ncnn_model (voir ai/vision/README.md).
+# =============================================================================
+services:
+  vision:
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    profiles: ["ai"]
+    build: ../ai/vision
+    image: sentinel-x/vision:local
+    container_name: snx-vision
+    group_add:
+      - video                         # accès webcam
+    devices:
+      - "${CAMERA_DEVICE:-/dev/video0}:/dev/video0"
+    read_only: true
+    tmpfs:
+      - /tmp
+    environment:
+      VISION_SOURCE: "0"
+      VISION_MODEL: /models/${VISION_MODEL:-yolov8n_ncnn_model}
+      VISION_HTTP_HOST: 0.0.0.0       # joignable par nginx sur le réseau Docker
+      MQTT_HOST: mosquitto
+      MQTT_PORT: ${MQTT_PORT:-8884}
+      MQTT_TLS: ${MQTT_TLS:-true}
+      MQTT_CA: /certs/ca.crt
+      MQTT_USER: vision
+      MQTT_PASSWORD: ${MQTT_VISION_PASSWORD:?définir MQTT_VISION_PASSWORD dans .env}
+      SITE_PROFILE: /config/site.yml
+      YOLO_CONFIG_DIR: /tmp           # Ultralytics écrit ses réglages : système de fichiers en lecture seule
+    volumes:
+      - ../ai/vision/models:/models:ro
+      - ../security/certs/ca.crt:/certs/ca.crt:ro
+      - ../config/${SITE_PROFILE_FILE:-site.example.yml}:/config/site.yml:ro
+    networks:
+      - app
+    depends_on:
+      mosquitto:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8001/health',timeout=3).status==200 else 1)"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    mem_limit: 1536m
+    cpus: 3.0
+
+  nginx:
+    environment:
+      VISION_UPSTREAM: vision:8001
+    depends_on:
+      - vision                        # nginx résout "vision" au démarrage

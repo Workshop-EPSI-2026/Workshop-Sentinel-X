@@ -37,17 +37,20 @@ jobs:
         working-directory: infra
         run: |
           cp .env.example .env
+          touch mosquitto/passwd
           docker compose --profile app --profile ai config --quiet
           docker compose -f docker-compose.yml -f docker-compose.dev.yml config --quiet
+          docker compose -f docker-compose.yml -f docker-compose.linux.yml --profile app --profile ai config --quiet
       - name: Aucun port publié en dehors de 443 et 8883
         working-directory: infra
         run: |
           cp .env.example .env
-          PORTS=$(docker compose -f docker-compose.yml --profile app --profile ai config --format json \
-            | jq -r '.services[].ports[]?.published' | sort -u | tr '\n' ' ')
+          touch mosquitto/passwd
+          PORTS=$(docker compose -f docker-compose.yml -f docker-compose.linux.yml --profile app --profile ai \
+            config --format json | jq -r '.services[].ports[]?.published' | sort -u | tr '\n' ' ')
           echo "Ports publiés : $PORTS"
           for p in $PORTS; do
-            case "$p" in 443|8883) ;; *) echo "::error::Port $p publié : interdit (Docker contourne UFW)"; exit 1;; esac
+            case "$p" in 443|8883) ;; *) echo "::error::Port $p publié : interdit (seuls 443 et 8883)"; exit 1;; esac
           done
 
   python:
@@ -64,6 +67,19 @@ jobs:
         run: ruff check api ai tools
       - name: Verrous de dépendances à jour
         run: python tools/lock_deps.py --check
+
+  brain:
+    name: Sentinel Brain (tests)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version-file: .python-version
+      - run: pip install -r ai/anomaly/requirements.txt
+      - name: Tests unitaires et scénarios simulés
+        run: python -m unittest discover -s ai/anomaly/tests -v
 
   firmware:
     name: Firmware ESP32-S3 (compilation)

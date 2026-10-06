@@ -2,11 +2,16 @@
 
 | Fichier | Rôle | Responsable |
 |---|---|---|
-| `bootstrap_github.py` | Crée le dépôt GitHub, les membres, labels, jalons, issues et le Kanban ; `--sync` met à jour les issues | Constantin |
-| `simulator.py` | Simulateur d'ESP32-S3 au format du contrat v2 (tâche j1) | Jeffrick |
-| `setup-poste.ps1` | Installe l'environnement commun d'un poste Windows, par rôle | Tous |
-| `doctor.py` | Contrôle un poste (`--role`) ou un Raspberry Pi (`--pi`) : [OK], [!!], [KO] et la correction | Tous |
+| `setup-poste.ps1` | Installe l'environnement commun d'un poste Windows, par rôle (`serveur` = PC de la démo) | Tous |
+| `doctor.py` | Contrôle un poste (`--role`), le PC serveur (`--role serveur`) ou un serveur Linux / Raspberry Pi (`--linux`) | Tous |
+| `serveur-pc.ps1` | PC serveur, en administrateur : pare-feu (443, 8883), NTP pour l'ESP, point d'accès Wi-Fi 2,4 GHz, vérification | Michel, Lisa |
+| `demarrer.ps1` | PC serveur : démarre Docker Desktop, la stack et la vision ; `-Arreter` arrête tout | Tous |
+| `simulator.py` | Simulateur d'ESP32-S3 au format du contrat (tâche j1) | Jeffrick |
+| `bootstrap_github.py` | Crée le dépôt, labels, jalons, issues et Kanban ; `--sync` met à jour les issues et ferme les tâches faites ou retirées | Constantin |
+| `repartition.py` | Régénère `docs/repartition.md` depuis le plan du Kanban | Constantin |
 | `lock_deps.py` | Régénère les verrous de dépendances (`--check` en CI) | Jeffrick, Constantin |
+
+Outils de la vision (vidéo de démonstration, badges, mesure YOLO) : `ai/vision/tools/`, voir `ai/vision/README.md`.
 
 ## Simulateur (`simulator.py`)
 
@@ -19,7 +24,7 @@ Il publie exactement ce que publiera le boîtier : `telemetry` (2 s, 500 ms quan
 | Scénario | Ce qui se passe |
 | --- | --- |
 | `normal` | Régime normal, sans fin (Ctrl+C pour arrêter) |
-| `drift` | Température qui monte lentement, gaz stable |
+| `drift` | Température qui monte lentement (+0,6 °C/min, panne de climatisation), gaz stable |
 | `gas_leak` | Ratio gaz qui monte vers 2, température stable |
 | `fire` | Température et gaz qui montent ensemble, humidité qui baisse |
 | `intrusion` | Passages répétés devant le PIR |
@@ -36,17 +41,21 @@ Chaque scénario enchaîne régime normal (`--warmup`, 15 min par défaut), anom
 docker run --rm -p 1883:1883 eclipse-mosquitto:2.0 mosquitto -c /mosquitto-no-auth.conf
 python tools/simulator.py --scenario gas_leak --speed 10 -v
 
-# Raspberry Pi, lundi (1883 authentifié, compte esp-01)
-python tools/simulator.py --host 192.168.10.1 --user esp-01 --password "<mdp>" --scenario all --speed 10
+# PC serveur, socle (1883 authentifié, compte esp-01)
+python tools/simulator.py --host localhost --user esp-01 --password "<mdp>" --scenario all --speed 10
 
-# Raspberry Pi, dès mardi (TLS 8883)
-python tools/simulator.py --host 192.168.10.1 --port 8883 --tls --cafile security/certs/ca.crt --user esp-01 --password "<mdp>"
+# PC serveur, dès le passage en TLS (8883)
+python tools/simulator.py --host localhost --port 8883 --tls --cafile security/certs/ca.crt --user esp-01 --password "<mdp>"
+
+# Depuis un autre poste connecté au point d'accès : --host 192.168.137.1
 
 # Jeu de données étiqueté pour Sentinel Brain (sans broker, instantané, reproductible)
-python tools/simulator.py --no-mqtt --scenario all --speed 100000 --seed 42 --csv ai/anomaly/data/simu.csv
+python tools/simulator.py --no-mqtt --scenario all --cooldown 600 --speed 100000 --seed 42 \
+    --csv ai/anomaly/data/simu.csv --rx-log ai/anomaly/data/simu_rx.jsonl
 ```
 
-La colonne `label` du CSV vaut `normal`, le nom du scénario pendant l'anomalie, ou `<scénario>_recovery`
+`--rx-log` écrit tout ce que le broker reçoit (télémétrie, événements, santé, statut, rejeux, tampon renvoyé après
+coupure), dans l'ordre d'arrivée : c'est l'entrée de Sentinel Brain dans le notebook. La colonne `label` du CSV vaut `normal`, le nom du scénario pendant l'anomalie, ou `<scénario>_recovery`
 pendant le retour au calme (à exclure de l'évaluation des faux positifs).
 
 **Attention** : en même temps que le vrai boîtier, utilisez `--device esp-sim` pour ne pas mélanger les `seq`

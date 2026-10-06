@@ -4,8 +4,10 @@
 !.env.example
 infra/mosquitto/passwd
 firmware/include/secrets.h
+firmware/*/secrets.h
 firmware/include/ca_cert.h
 firmware/include/certs.h
+firmware/*/certs.h
 security/certs/*
 !security/certs/.gitkeep
 *.key
@@ -18,6 +20,10 @@ ai/vision/models/*
 !ai/vision/models/.gitkeep
 ai/anomaly/models/*
 !ai/anomaly/models/.gitkeep
+ai/anomaly/data/*
+!ai/anomaly/data/.gitkeep
+ai/vision/data/*
+!ai/vision/data/.gitkeep
 *.pt
 *.onnx
 *.mp4
@@ -34,6 +40,7 @@ __pycache__/
 .venv/
 venv/
 .ipynb_checkpoints/
+.ruff_cache/
 
 # ---- Système / éditeurs ----
 .DS_Store

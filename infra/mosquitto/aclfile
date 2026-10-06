@@ -1,8 +1,8 @@
-# Sentinel-X v2 — ACL Mosquitto (contrat : docs/contracts.md)
-# Moindre privilège. En TLS mutuel, le nom d'utilisateur d'un boîtier = CN de son certificat.
-# Ajouter un bloc par boîtier supplémentaire (esp-02, ...).
+# Sentinel-X — ACL Mosquitto (contrat : docs/contracts.md)
+# Moindre privilège. En TLS mutuel, le nom d'utilisateur d'un client = CN de son certificat.
+# Ajouter un bloc par boîtier supplémentaire (esp-02, ...) et par caméra (cam-02, ...).
 
-# --- Boîtier 1
+# --- Boîtier 1 (ESP32-S3)
 user esp-01
 topic write sentinel/esp-01/telemetry
 topic write sentinel/esp-01/event
@@ -11,24 +11,33 @@ topic write sentinel/esp-01/status
 topic read  sentinel/esp-01/cmd
 topic read  sentinel/esp-01/config
 
-# --- API : lit tout ce qui vient des boîtiers et de Brain, pilote commandes et configuration
+# --- Caméra 1 : service vision (tourne sur le PC, hors Docker sous Windows)
+user vision
+topic write sentinel/cam-01/vision
+topic write sentinel/cam-01/status
+topic read  sentinel/site/config
+
+# --- API : lit tout ce qui vient des boîtiers, de la vision et de Brain ; pilote commandes et configuration
 user api
 topic read  sentinel/+/telemetry
 topic read  sentinel/+/event
 topic read  sentinel/+/health
 topic read  sentinel/+/status
+topic read  sentinel/+/vision
 topic read  sentinel/brain/#
 topic write sentinel/+/cmd
 topic write sentinel/+/config
+topic write sentinel/site/config
 
-# --- Sentinel Brain : lit les boîtiers et le profil de site, publie les scores
+# --- Sentinel Brain : lit boîtiers, vision et profil de site ; publie scores et alertes
 user anomaly
 topic read  sentinel/+/telemetry
 topic read  sentinel/+/event
 topic read  sentinel/+/health
 topic read  sentinel/+/status
+topic read  sentinel/+/vision
 topic read  sentinel/site/config
-topic write sentinel/brain/score
+topic write sentinel/brain/#
 
 # --- Supervision et tests (mosquitto_sub) : lecture seule
 user monitor

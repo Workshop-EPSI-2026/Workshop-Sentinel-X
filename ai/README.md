@@ -1,24 +1,31 @@
 # IA — Jeffrick (binôme vision : Momo ; détection cyber : Lisa)
 
-| Dossier | Service | Point d'entrée de l'image |
-|---|---|---|
-| `vision/` | YOLOv8n NCNN, suivi, zone interdite, temps de présence, caméra masquée, faible luminosité, `/video` | `app/main.py` (FastAPI, port 8001, `/health`) |
-| `anomaly/` | **Sentinel Brain** : détection multicouche, fusion, incidents expliqués, score en direct | `app/main.py` (`python -m app.main`) |
-| `anomaly/notebooks/` | Exploration et validation (section IA du dossier) | — |
+Deux modèles, deux services, un seul cerveau qui fusionne :
+
+| Dossier | Service | Où il tourne | Point d'entrée |
+|---|---|---|---|
+| `vision/` | Mouvement, YOLOv8n + suivi ByteTrack, zone interdite, temps de présence, badges ArUco, caméra masquée / sombre / figée, flux `/video` | **Sur le PC Windows, hors Docker** (webcam) ; conteneur sous Linux / Raspberry Pi | `python -m app.main` (port 8001) |
+| `anomaly/` | **Sentinel Brain** : 4 couches sur les capteurs, fusion avec la vision, badges et horaires, accès refusés du broker, incidents expliqués, score en direct | Conteneur `anomaly` (Docker Desktop) | `python -m app.main` |
+
+```
+webcam ──► vision ──► sentinel/cam-01/vision ─┐
+ESP32-S3 ─► sentinel/esp-01/telemetry|event ──┼──► Sentinel Brain ──► POST /api/v1/alerts + sentinel/brain/score
+journal Mosquitto (accès refusés) ────────────┘
+```
+
+La vision **voit** (qui, où, depuis combien de temps, quel badge) ; Brain **décide** (intrusion confirmée par le PIR,
+agent autorisé dans ses horaires, rôdeur, sabotage). Aucune reconnaissance faciale : les agents portent un badge ArUco.
 
 ## Sentinel Brain en quatre couches
-1. **Qualité des données** : plausibilité (DHT11 0-50 °C, 20-90 %), capteur figé, trous de `seq`, rejeu (`boot_id` + `seq`).
-2. **Par capteur** : ligne de base EWMA, écart robuste (médiane, MAD), **CUSUM** pour les dérives lentes. Température lissée (pas de 1 °C du DHT11).
-3. **Multivariée** : Isolation Forest sur fenêtres de 60 s (température lissée et pente, humidité, ratio gaz et pente, corrélation température-gaz, PIR/min, RSSI).
-4. **Prévision** : lissage exponentiel double (Holt) → `eta_min` avant le niveau critique.
+1. **Qualité des données** : plausibilité, capteur figé, `seq` + `boot_id` (rejeu), horodatage falsifié.
+2. **Par capteur** : CUSUM décorrélé (dérives lentes) + vitesse de montée (fuite, feu), température lissée.
+3. **Multivariée** : Isolation Forest sur fenêtres de 60 s, réentraîné sur le régime sain.
+4. **Prévision** : Holt à pas variable → `eta_min` avant le niveau critique.
 
-Puis **fusion** : scores environnement / physique / cyber (0-100), Sentinel Score global, règles de corrélation
-(intrusion confirmée, sabotage, risque incendie, fuite de gaz, brouillage, attaque cyber, capteur défaillant),
-explication des facteurs dominants, cycle de vie avec délai minimal entre deux notifications.
+Puis **fusion** : environnement / physique / cyber (0-100), Sentinel Score, règles de corrélation et cycle de vie des
+incidents. Détails et résultats : `anomaly/README.md`, `anomaly/notebooks/01-prototype.ipynb`.
 
-**Adaptation** : apprentissage 10 min au démarrage, réentraînement toutes les 30 min sur fenêtres sans incident,
-sensibilités lues dans le profil de site (`sentinel/site/config`). Modèles persistés dans le volume `brain-models`.
-
-## Indicateurs à mesurer pour le jury
-Minutes d'anticipation avant le seuil · faux positifs sur 1 h de régime normal · latence de bout en bout · FPS sur Pi 5 et Pi 4.
-Tableau YOLO (format, taille, ms, FPS) dans `docs/preuves/latence-yolo.md`.
+## Indicateurs à présenter au jury
+Avance sur les seuils bruts (fuite : 1 min, critique prévu ~3 min avant) · fausses alarmes sur 24 h normales ·
+latence YOLO et images/s sur le PC (`vision/tools/benchmark.py` → `docs/preuves/latence-yolo.md`) ·
+délai PIR → intrusion confirmée.

@@ -40,11 +40,14 @@ brain:
   window_s: 60
   retrain_every_min: 30            # réentraînement sur fenêtres sans incident
   forecast_horizon_min: 10
-  correlation_window_s: 5          # PIR + vision = intrusion confirmée
-  loitering_s: 20
-  cooldown_s: 60                   # délai minimal entre deux notifications d'un même incident
+  correlation_window_s: 5          # PIR + personne vue à moins de 5 s = intrusion confirmée
+  loitering_s: 20                  # présence prolongée dans la zone (rôdeur)
+  cooldown_s: 60                   # calme observé avant de clore un incident
+  camera_timeout_s: 15             # caméra silencieuse : hors ligne
+  sabotage_window_s: 60            # caméra muette moins de 60 s après une détection = sabotage
+  auth_failure_burst: 5            # accès MQTT refusés en 60 s = attaque cyber
 
-vision:
+vision:                            # service vision (sur le PC Windows, hors Docker ; conteneur sous Linux)
   enabled: true
   imgsz: 320
   confidence: 0.5
@@ -56,6 +59,10 @@ vision:
     - [0.20, 0.95]
   masking_detection: true
   low_light_threshold: 35          # luminosité moyenne (0..255) sous laquelle le PIR prend le relais
+  aruco_dictionary: DICT_4X4_50    # badges imprimés par ai/vision/tools/badges.py (pas de biométrie)
+  authorized_badges:               # liste blanche : Brain décide avec les horaires (hours vide = toujours)
+    - { id: 7,  name: "A. Martin (technicien)", hours: "07:00-19:00", days: [mon, tue, wed, thu, fri] }
+    - { id: 12, name: "Astreinte AetherCorp" }
 
 integrations:
   webhook_url: ""                  # vide = désactivé ; POST JSON de chaque incident

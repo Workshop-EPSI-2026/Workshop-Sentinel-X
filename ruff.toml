@@ -5,3 +5,7 @@ line-length = 120
 [lint]
 select = ["E", "F", "W", "I", "B", "UP"]
 ignore = ["E501"]
+
+[lint.per-file-ignores]
+# Notebooks : imports après sys.path et lignes de tracé compactes (ax.set_x(); ax.set_y()) acceptés
+"*.ipynb" = ["E402", "E702"]

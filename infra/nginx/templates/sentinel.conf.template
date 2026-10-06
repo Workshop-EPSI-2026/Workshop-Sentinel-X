@@ -1,0 +1,55 @@
+# Bloc server de Sentinel-X. ${VISION_UPSTREAM} est remplacé au démarrage du conteneur nginx.
+server {
+  listen 8443 ssl;
+  http2 on;
+  server_name sentinel-pc localhost _;
+
+  ssl_certificate     /etc/nginx/certs/server.crt;
+  ssl_certificate_key /etc/nginx/certs/server.key;
+  ssl_protocols       TLSv1.2 TLSv1.3;
+  ssl_prefer_server_ciphers on;
+
+  add_header Strict-Transport-Security "max-age=31536000" always;
+  add_header X-Content-Type-Options    "nosniff" always;
+  add_header X-Frame-Options           "DENY" always;
+  add_header Referrer-Policy           "no-referrer" always;
+
+  client_max_body_size 1m;
+
+  # Dashboard (fichiers statiques compilés)
+  root /usr/share/nginx/html;
+  location / { try_files $uri $uri/ /index.html; }
+
+  # API REST
+  location /api/ {
+    limit_req zone=api burst=40 nodelay;
+    set $api_upstream http://api:8000;
+    proxy_pass $api_upstream;
+    proxy_set_header Host              $host;
+    proxy_set_header X-Real-IP         $remote_addr;
+    proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto https;
+  }
+
+  # WebSocket temps réel (WSS)
+  location /ws {
+    set $api_upstream http://api:8000;
+    proxy_pass $api_upstream;
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade    $http_upgrade;
+    proxy_set_header Connection $connection_upgrade;
+    proxy_read_timeout 3600s;
+  }
+
+  # Flux vidéo MJPEG annoté (service vision). Adresse fixée au démarrage : résolue par /etc/hosts
+  # (host.docker.internal sous Docker Desktop) ou par le DNS de Docker (vision, sous Linux).
+  location /video {
+    proxy_pass http://${VISION_UPSTREAM}/video;
+    proxy_buffering off;
+    proxy_cache off;
+    proxy_read_timeout 3600s;
+  }
+  location = /vision/health {
+    proxy_pass http://${VISION_UPSTREAM}/health;
+  }
+}

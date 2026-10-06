@@ -1,24 +1,28 @@
 # =============================================================================
-#  Sentinel-X v2 — Stack serveur (Raspberry Pi 5, Option A)
-#  Le même fichier tourne tel quel sur le Raspberry Pi 4 de repli (arm64).
+#  Sentinel-X — stack serveur, Option B : PC portable sous Windows 11 + Docker Desktop.
+#  Le même fichier tourne sans modification sous Linux et sur un Raspberry Pi 5 (arm64) :
+#  ajouter alors docker-compose.linux.yml pour mettre aussi la vision dans un conteneur.
 #
-#  Démarrage :   cd infra && cp .env.example .env  (puis remplir .env)
-#                docker compose up -d
+#  Démarrage (PowerShell, dossier infra) :   copy .env.example .env   (puis remplir .env)
+#                                            docker compose up -d
+#  Ou tout-en-un depuis la racine :          .\tools\demarrer.ps1
 #
 #  Profils (variable COMPOSE_PROFILES dans .env) :
-#    (aucun)   -> mosquitto + postgres          (lundi : socle)
+#    (aucun)   -> mosquitto + postgres          (socle)
 #    app       -> + api + nginx (dashboard)     (dès que l'API existe)
-#    ai        -> + vision + anomaly (Sentinel Brain)
+#    ai        -> + anomaly (Sentinel Brain)
+#  La vision tourne hors Docker sous Windows : Docker Desktop ne donne pas accès à la webcam.
+#  Elle est lancée par tools\demarrer.ps1 (ou : python -m app.main, dans ai/vision).
 #
-#  MQTT : 8883 = boîtiers (publié), 8884 = services (interne, jamais publié).
-#  Fichier Mosquitto choisi par MOSQUITTO_CONF : tls (mardi) puis mtls (TLS mutuel).
+#  MQTT : 8883 = boîtiers et vision (publié), 8884 = services Docker (interne, jamais publié).
+#  Fichier Mosquitto choisi par MOSQUITTO_CONF : tls puis mtls (TLS mutuel).
 #
 #  Règles de sécurité appliquées partout :
-#    - seuls 443 (HTTPS/WSS) et 8883 (MQTTS) sont publiés sur l'hôte
-#      (Docker contourne UFW : ne JAMAIS ajouter d'autres "ports:")
+#    - seuls 443 (HTTPS/WSS) et 8883 (MQTTS) sont publiés sur l'hôte ; le pare-feu Windows ne les
+#      ouvre qu'au réseau du point d'accès (tools\serveur-pc.ps1). Ne JAMAIS ajouter d'autres "ports:".
 #    - base de données sur un réseau interne, jamais exposée
-#    - conteneurs non root, no-new-privileges, capabilities retirées
-#    - limites mémoire : total visé < 3 Go avec YOLO
+#    - conteneurs non root, no-new-privileges, capabilities retirées, système de fichiers en lecture seule
+#    - limites mémoire : la stack complète tient sous 1,5 Go (portable sur un Raspberry Pi)
 # =============================================================================
 
 name: sentinel-x
@@ -46,17 +50,17 @@ services:
     container_name: snx-mosquitto
     user: "1883:1883"
     group_add:
-      - "${CERTS_GID:-2000}"          # lecture de la clé TLS (voir security/README.md)
+      - "${CERTS_GID:-2000}"          # Linux / Raspberry : lecture de la clé TLS (voir security/README.md)
     read_only: true
     ports:
-      - "8883:8883"                   # MQTTS — seul port MQTT publié
+      - "8883:8883"                   # MQTTS — seul port MQTT publié (boîtiers et vision)
     volumes:
       - ./mosquitto/${MOSQUITTO_CONF:-mosquitto.tls.conf}:/mosquitto/config/mosquitto.conf:ro
       - ./mosquitto/aclfile:/mosquitto/config/aclfile:ro
       - ./mosquitto/passwd:/mosquitto/config/passwd:ro
       - ../security/certs:/mosquitto/certs:ro
       - mosquitto-data:/mosquitto/data
-      - mosquitto-log:/mosquitto/log  # partagé en lecture seule avec Sentinel Brain
+      - mosquitto-log:/mosquitto/log  # partagé en lecture seule avec Sentinel Brain (accès refusés)
     networks:
       - app
     healthcheck:
@@ -81,6 +85,7 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-sentinel}
       POSTGRES_USER: ${POSTGRES_USER:-sentinel}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?définir POSTGRES_PASSWORD dans .env}
+      TZ: Europe/Paris
     command: >
       postgres
       -c shared_buffers=64MB
@@ -88,7 +93,7 @@ services:
       -c work_mem=4MB
     volumes:
       - pg-data:/var/lib/postgresql/data
-      - ./postgres/init:/docker-entrypoint-initdb.d:ro
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro   # schéma (01-schema.sql), au premier démarrage
     networks:
       - data                          # réseau interne : aucun accès depuis l'extérieur
     healthcheck:
@@ -150,11 +155,19 @@ services:
     read_only: true
     tmpfs:
       - /tmp
+      - /etc/nginx/conf.d             # configuration générée au démarrage depuis templates/
     ports:
       - "443:8443"                    # HTTPS + WSS — seul port web publié
+    environment:
+      # Flux vidéo : la vision tourne sur le PC Windows (hors Docker) -> host.docker.internal:8001.
+      # docker-compose.linux.yml le remplace par le conteneur vision (vision:8001).
+      VISION_UPSTREAM: ${VISION_UPSTREAM:-host.docker.internal:8001}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"   # déjà défini par Docker Desktop ; requis sous Linux
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ../dashboard/dist:/usr/share/nginx/html:ro   # build fait sur un laptop (npm run build)
+      - ./nginx/templates:/etc/nginx/templates:ro
+      - ../dashboard/dist:/usr/share/nginx/html:ro   # npm run build (dashboard/)
       - ../security/certs:/etc/nginx/certs:ro
     networks:
       - app
@@ -166,41 +179,6 @@ services:
       timeout: 5s
       retries: 3
     mem_limit: 64m
-
-  # ------------------------------------------------------------ IA vision ---
-  vision:
-    <<: *hardening
-    profiles: ["ai"]
-    build: ../ai/vision
-    image: sentinel-x/vision:local
-    container_name: snx-vision
-    group_add:
-      - video                         # accès webcam
-    devices:
-      - "${CAMERA_DEVICE:-/dev/video0}:/dev/video0"
-    read_only: true
-    tmpfs:
-      - /tmp
-    environment:
-      API_URL: http://api:8000
-      API_KEY: ${API_KEY}
-      MODEL_PATH: /models/${VISION_MODEL:-yolov8n_ncnn_model}
-      SITE_PROFILE: /config/site.yml   # zone, confiance, luminosité (mise à jour via l'API)
-    volumes:
-      - ../ai/vision/models:/models:ro
-      - ../config/${SITE_PROFILE_FILE:-site.example.yml}:/config/site.yml:ro
-    networks:
-      - app
-    depends_on:
-      - api
-    healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8001/health',timeout=3).status==200 else 1)"]
-      interval: 20s
-      timeout: 5s
-      retries: 5
-      start_period: 60s
-    mem_limit: 1536m
-    cpus: 3.0
 
   # ------------------------------------------- Sentinel Brain (détection) ---
   anomaly:
@@ -221,21 +199,24 @@ services:
       MQTT_PASSWORD: ${MQTT_ANOMALY_PASSWORD:?définir MQTT_ANOMALY_PASSWORD dans .env}
       API_URL: http://api:8000
       API_KEY: ${API_KEY}
-      MODEL_DIR: /models
       SITE_PROFILE: /config/site.yml
       MOSQUITTO_LOG: /mosquitto-log/mosquitto.log   # accès refusés -> signaux cyber
+      TZ: Europe/Paris
     volumes:
       - ../security/certs/ca.crt:/certs/ca.crt:ro
       - ../config/${SITE_PROFILE_FILE:-site.example.yml}:/config/site.yml:ro
       - mosquitto-log:/mosquitto-log:ro
-      - brain-models:/models          # modèles réentraînés en continu (persistants)
     networks:
       - app
     depends_on:
       mosquitto:
         condition: service_healthy
-      api:
-        condition: service_started
+    healthcheck:
+      test: ["CMD", "python", "-c", "import os,sys,time; sys.exit(0 if time.time()-os.path.getmtime('/tmp/brain.alive')<30 else 1)"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
     mem_limit: 512m
 
 networks:
@@ -247,4 +228,3 @@ volumes:
   mosquitto-data:
   mosquitto-log:
   pg-data:
-  brain-models:
