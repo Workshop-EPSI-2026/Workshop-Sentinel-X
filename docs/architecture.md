@@ -1,27 +1,27 @@
 # Sentinel-X — Architecture v2
 
 > Version alignée sur le matériel réellement disponible : ESP32-S3 N16R8, DHT11, module MQ-2,
-> PIR HW-416-B (BISS0001), Raspberry Pi 5 et Raspberry Pi 4 Model B.
+> PIR HW-416-B (BISS0001) ; partie serveur hébergée sur un PC Windows 11 (pas de Raspberry Pi).
 > Les schémas illustrés se trouvent dans le document d'architecture partagé de l'équipe.
 
 ## 1. Synthèse
 
 Sentinel-X v2 est un système de détection **multicouche et autonome**. Le boîtier ne se contente pas
 de transmettre des mesures : il raisonne déjà localement, garde ses données quand le réseau tombe et
-déclenche une alarme réflexe même si le serveur est éteint. Sur le Raspberry Pi 5, un moteur de
+déclenche une alarme réflexe même si le serveur est éteint. Sur le PC serveur, un moteur de
 détection (« Sentinel Brain ») fusionne trois domaines de menace — environnement, intrusion physique et
 cyberattaque — en un score unique et explique chaque alerte en langage clair.
 
 | Décision | Choix |
 | --- | --- |
 | Boîtier | ESP32-S3 N16R8 (2 cœurs, 8 Mo de PSRAM, crypto matérielle, capteurs tactiles intégrés) |
-| Serveur | Raspberry Pi 5 dans le boîtier : point d'accès Wi-Fi, Docker, IA |
-| Repli | Raspberry Pi 4 Model B, même image et même stack, prêt à remplacer le Pi 5 ; sert aussi de station d'audit au pentest |
+| Serveur | PC Windows 11 : point d'accès Wi-Fi mobile, Docker Desktop (WSL2), vision hors Docker (webcam USB) |
+| Repli | Redémarrage complet du PC répété et chronométré, simulateur d'ESP en secours ; audit depuis un laptop de l'équipe |
 | Communication | MQTT : 1883 authentifié lundi, TLS 8883 mardi, TLS mutuel (certificat par boîtier) en cible |
 | Détection | 4 couches : qualité des données, détection par capteur (EWMA, MAD, CUSUM), multivariée (Isolation Forest), prévision (Holt) ; puis fusion et règles de corrélation |
 | Vision | YOLOv8n en NCNN, 320 px, suivi des personnes, zone interdite, temps de présence, détection de caméra masquée |
 | Personnalisation | Profil de site (`config/site.example.yml`) modifiable à chaud depuis le dashboard, appliqué au boîtier et au serveur |
-| Données | PostgreSQL 16 ; pas d'InfluxDB ni de Grafana (mémoire du Pi) |
+| Données | PostgreSQL 16 ; pas d'InfluxDB ni de Grafana (un seul moteur à maintenir) |
 
 Principes : **autonomie à trois niveaux**, **sécurité dès mardi**, **aucune dépendance à Internet le jour de la démo**,
 **chaque alerte expliquée**, **un seul fichier de configuration par site**.
@@ -34,8 +34,7 @@ Principes : **autonomie à trois niveaux**, **sécurité dès mardi**, **aucune 
 | DHT11 | Température et humidité, point de rosée calculé | ±2 °C, pas de 1 °C, 0-50 °C, 1 lecture/s maximum | Lissage avant calcul de pente, fenêtres de 60 s, le gaz porte la détection fine ; sèche-cheveux à distance en démo |
 | MQ-2 (module) | Sortie analogique en millivolts calibrés et ratio par rapport à la ligne de base apprise ; sortie DO en seuil matériel par interruption | Chauffe, préchauffage nécessaire, sortie jusqu'à 5 V, pas de mesure en ppm sans gaz étalon | Ponts diviseurs, ligne de base apprise au démarrage, on parle de « ratio » et non de ppm |
 | PIR HW-416-B | Détection de mouvement jusqu'à environ 7 m, comptage d'événements par minute | Temps mort, sensible à la chaleur | Cavalier en mode H (redéclenchable), sensibilité au maximum, délai au minimum ; fusion avec la vision |
-| Raspberry Pi 5 | Serveur complet, YOLO en NCNN | Chauffe, alimentation 27 W requise | Ventilateur actif, budget mémoire, surveillance du bridage |
-| Raspberry Pi 4 Model B | Repli à chaud, station d'audit (Nmap, tcpdump) | Inférence plus lente | Même image, même `docker-compose.yml` |
+| PC serveur Windows 11 | Serveur complet, point d'accès Wi-Fi, YOLO sur le processeur du PC | Veille et mises à jour Windows, webcam inaccessible depuis Docker Desktop, point d'accès à réactiver après redémarrage | Veille désactivée, mises à jour suspendues, vision lancée hors Docker, redémarrage répété |
 | Webcam USB, OLED, buzzer, LEDs | Vision ; affichage ; alarme sonore et visuelle | À confirmer dans le kit | Sans OLED ni buzzer : la LED RGB intégrée sert de voyant d'état |
 
 Idée clé : **une feuille de cuivre collée à l'intérieur du couvercle, reliée à une entrée tactile de l'ESP32-S3,
@@ -43,8 +42,9 @@ devient un détecteur d'effraction gratuit**. Toute manipulation du boîtier est
 
 ## 3. Architecture globale
 
-Une mesure suit toujours le même chemin : l'ESP32-S3 la publie en MQTT chiffré au broker du Pi 5, l'API la stocke et
-la pousse au dashboard, Sentinel Brain la score. La vision, branchée sur la webcam, envoie ses détections à l'API.
+Une mesure suit toujours le même chemin : l'ESP32-S3 la publie en MQTT chiffré au broker du PC serveur, l'API la stocke et
+la pousse au dashboard, Sentinel Brain la score. La vision, lancée sur le PC hors Docker et branchée sur la webcam,
+envoie ses détections à l'API par nginx.
 L'opérateur ne voit que nginx, en HTTPS.
 
 ### Autonomie à trois niveaux
@@ -52,7 +52,7 @@ L'opérateur ne voit que nginx, en HTTPS.
 | Niveau | Ce qui fonctionne | Exemple |
 | --- | --- | --- |
 | 1 · Boîtier seul | Mesures, garde locale, alarme réflexe (LED et buzzer), tampon de plusieurs heures en PSRAM | Le Wi-Fi est brouillé : l'ESP sonne quand même et renvoie tout l'historique au retour du réseau |
-| 2 · Boîtier + Pi 5 | Tout le système, sans Internet | Configuration de la démo |
+| 2 · Boîtier + PC serveur | Tout le système, sans Internet | Configuration de la démo |
 | 3 · Intégration | API documentée, webhook sortant, export CSV, topics MQTT documentés | Remontée vers une supervision AetherCorp |
 
 ### Liens et ports
@@ -61,10 +61,12 @@ L'opérateur ne voit que nginx, en HTTPS.
 | --- | --- | --- | --- |
 | ESP32-S3 vers broker | MQTT (télémétrie, événements, santé), retour des commandes et de la configuration | 8883 (1883 lundi) | Oui, TLS puis TLS mutuel |
 | Services vers broker | MQTT dans Docker | 8884 interne | Oui |
-| Vision et Brain vers API | HTTP `POST /api/v1/alerts` dans Docker | 8000 interne | Non exposé |
+| Brain vers API | HTTP `POST /api/v1/alerts` dans Docker | 8000 interne | Non exposé |
+| Vision vers API | HTTPS par nginx (`https://localhost`), depuis le PC | 443 | Oui |
+| nginx vers vision | HTTP vers `host.docker.internal` (`/video`) | 8001 sur 127.0.0.1 | Local au PC |
 | API vers base | PostgreSQL, réseau interne | 5432 interne | Non exposé |
 | Navigateur vers nginx | HTTPS, WSS (`/ws`), MJPEG (`/video`) | 443 | Oui |
-| Administration | SSH par clé | 22 | Oui |
+| Administration | Directement sur le PC serveur, pas de SSH | — | — |
 
 ## 4. Bloc IoT : Edge Node ESP32-S3
 
@@ -103,9 +105,9 @@ La configuration reçue sur `sentinel/<id>/config` est appliquée immédiatement
 2. Câbler et tester chaque capteur seul, valeurs sur le moniteur série.
 3. Ponts diviseurs du MQ-2, préchauffage dès le branchement, relever la valeur au repos.
 4. Feuille de cuivre et seuil tactile ; tester une main posée sur le couvercle.
-5. Wi-Fi du Pi, adresse réservée 192.168.10.10, MQTT en clair sur 1883 avec identifiants.
+5. Wi-Fi du PC (point d'accès mobile, 2,4 GHz), broker 192.168.137.1, MQTT en clair sur 1883 avec identifiants.
 6. Tâches FreeRTOS, garde locale, voyant RGB, tampon PSRAM, santé.
-7. TLS sur 8883 avec la CA embarquée (`WiFiClientSecure::setCACert`), heure par le NTP du Pi.
+7. TLS sur 8883 avec la CA embarquée (`WiFiClientSecure::setCACert`), heure par le NTP du PC (service Temps Windows).
 8. TLS mutuel : certificat client du boîtier fourni par Lisa.
 
 **Fini quand** : Wi-Fi coupé 5 minutes, le voyant passe en violet, l'alarme locale fonctionne, et au retour du réseau
@@ -115,18 +117,15 @@ toutes les mesures arrivent sans trou, en TLS.
 
 | Équipement | Adresse | Attribution |
 | --- | --- | --- |
-| Raspberry Pi 5 (passerelle, serveur, `sentinel-pi`) | 192.168.10.1 | Fixe |
-| Raspberry Pi 4 (repli, station d'audit, `sentinel-pi4`) | 192.168.10.2 | Fixe |
-| ESP32-S3 `esp-01` | 192.168.10.10 | Réservée par adresse MAC |
-| Postes de l'équipe | 192.168.10.100 à .120 | DHCP |
+| PC serveur (point d'accès, Docker, vision, `sentinel-pc`) | 192.168.137.1 | Fixe (point d'accès mobile Windows) |
+| ESP32-S3 `esp-01` | DHCP | Lue dans la page Point d'accès mobile |
+| Postes de l'équipe | DHCP | 8 appareils au maximum sur le point d'accès |
 
-Ports ouverts sur le Pi 5 : 22 (SSH par clé, sous-réseau admin), 443 (HTTPS, WSS), 8883 (MQTTS). Tout le reste est refusé.
-Wi-Fi 2,4 GHz, WPA2-AES, canal 1, 6 ou 11 le moins chargé, phrase de passe de 20 caractères minimum, hors dépôt.
-Plage à confirmer avec les coachs.
+Ports ouverts sur le PC serveur : 443 (HTTPS, WSS), 8883 (MQTTS), 123/udp (NTP). Tout le reste est refusé par le pare-feu Windows.
+Wi-Fi 2,4 GHz, WPA2, phrase de passe de 20 caractères minimum, hors dépôt.
+Préparation du PC (veille, NTP, pare-feu) et procédure de redémarrage : `docs/reseau.md`.
 
-En cas de bascule sur le Pi 4 : il reprend l'adresse 192.168.10.1 et le point d'accès ; l'ESP ne voit aucune différence.
-
-## 6. Bloc Infrastructure : Raspberry Pi 5 et Docker
+## 6. Bloc Infrastructure : PC serveur et Docker
 
 | Conteneur | Rôle | Réseaux | Port publié | Mémoire max | Profil |
 | --- | --- | --- | --- | --- | --- |
@@ -134,8 +133,11 @@ En cas de bascule sur le Pi 4 : il reprend l'adresse 192.168.10.1 et le point d'
 | `postgres` | Historique, alertes, configuration | data (interne) | aucun | 384 Mo | socle |
 | `api` | REST, WebSocket, ingestion, configuration | app, data | aucun | 256 Mo | app |
 | `nginx` | HTTPS, WSS, dashboard, limitation de débit | app | 443 | 64 Mo | app |
-| `vision` | YOLO, suivi, zone, caméra masquée, `/video` | app | aucun | 1,5 Go | ai |
+| `vision` | YOLO, suivi, zone, caméra masquée, `/video` ; **hors Docker sur le PC** (`ai/vision/run-windows.ps1`) | — | aucun (127.0.0.1:8001) | — | `vision` (hôte Linux uniquement) |
 | `anomaly` (Sentinel Brain) | Détection multicouche, fusion, score | app | aucun | 512 Mo | ai |
+
+Docker Desktop sous Windows n'a pas accès à la webcam : la vision tourne donc directement sur le PC, parle à l'API
+par nginx et lui fournit `/video`. Le conteneur `vision` reste disponible pour un hôte Linux.
 
 Tous les conteneurs : redémarrage automatique, contrôle de santé, sans root, `no-new-privileges`, capacités retirées,
 journaux limités. Le journal de Mosquitto est partagé en lecture seule avec Sentinel Brain pour détecter les
@@ -143,11 +145,12 @@ tentatives d'accès refusées.
 
 ### Mise en place
 
-1. Pi OS Lite 64 bits sur le Pi 5 **et** le Pi 4 (même procédure), SSH par clé, Docker.
+1. PC serveur préparé : Docker Desktop (WSL2), Git, Python 3.12, veille désactivée, NTP, pare-feu (`docs/reseau.md`).
 2. `infra/.env` depuis `.env.example`, comptes Mosquitto (`infra/mosquitto/README.md`).
-3. Socle lundi (Mosquitto + PostgreSQL, 1883), puis TLS mardi (`MOSQUITTO_CONF=mosquitto.tls.conf`), puis profils `app` et `ai`.
-4. Budget mesuré avec toute la stack : moins de 3 Go de RAM, pas de bridage après 30 minutes.
-5. Répétition de bascule sur le Pi 4 : moins de 10 minutes chronométrées.
+3. Socle lundi (Mosquitto + PostgreSQL, 1883), puis TLS mardi (`MOSQUITTO_CONF=mosquitto.tls.conf`), puis profils `app` et `ai`,
+   et la vision lancée à part.
+4. Budget mesuré avec toute la stack et la vision (`docker stats`, Gestionnaire des tâches) : stable après 30 minutes.
+5. Répétition du redémarrage du PC serveur : moins de 10 minutes chronométrées.
 
 ## 7. Bloc Backend et Dashboard
 
@@ -160,14 +163,14 @@ tentatives d'accès refusées.
 | `/api/v1/commands` | POST | Commande vers un boîtier (alarme, mode, recalibrage, redémarrage) |
 | `/api/v1/config` | GET / PUT | Profil de site ; publié en message conservé aux boîtiers et à Brain |
 | `/api/v1/score` | GET | Scores courants par domaine |
-| `/api/v1/health` | GET | Santé du Pi et des boîtiers |
+| `/api/v1/health` | GET | Santé du serveur et des boîtiers |
 | `/ws` | WebSocket | Télémétrie, scores, incidents en temps réel |
 
 Cycle de vie d'un incident : **ouvert → acquitté → résolu**, avec regroupement des répétitions, délai minimal entre deux
 notifications et escalade de gravité si la situation persiste. Chaque action d'opérateur est tracée (`audit_log`).
 
 Vues du dashboard : **Supervision** (jauge Sentinel Score, courbes, voyant du boîtier), **Incidents** (explication de
-chaque alerte, acquittement), **Vision** (flux annoté, zone, FPS), **Système** (santé de chaque brique, Pi et boîtiers),
+chaque alerte, acquittement), **Vision** (flux annoté, zone, FPS), **Système** (santé de chaque brique, serveur et boîtiers),
 **Réglages** (profil de site, modes, sensibilités, zone de la caméra).
 
 ### Mise en place
@@ -228,7 +231,7 @@ uniforme) et **faible luminosité** (le poids de la vision baisse, celui du PIR 
 ### Mise en place
 
 1. Simulateur au format v2 avec scénarios (dérive lente, fuite, incendie, intrusion, rejeu).
-2. Mesures YOLO sur le Pi 5 et le Pi 4 : PyTorch, NCNN, 320 px ; tableau des résultats.
+2. Mesures YOLO sur le PC serveur : PyTorch, NCNN (OpenVINO si besoin), 320 px ; tableau des résultats.
 3. Prototype des 4 couches en notebook sur données simulées.
 4. Vision v1 : suivi, zone, temps de présence, caméra masquée, `/video`.
 5. Données réelles : plusieurs heures de régime normal, scénarios provoqués et horodatés.
@@ -244,7 +247,7 @@ de régime normal, latence de bout en bout, FPS.
 | Wi-Fi | WPA2-AES, phrase longue, réseau isolé | Configuration |
 | MQTT | TLS, puis TLS mutuel : un certificat par boîtier, identité = nom d'utilisateur ; ACL par topic ; 1883 fermé | Wireshark clair contre chiffré ; client sans certificat refusé |
 | API | HTTPS, clé d'API, validation stricte, limitation de débit, authentification de l'interface | Payload invalide rejeté, appel sans clé refusé |
-| Hôte | UFW refus par défaut, SSH par clé ed25519, pas de root | Nmap avant et après |
+| Hôte | Pare-feu Windows refus par défaut (443, 8883, 123/udp), réseau du point d'accès en profil Public, pas de SSH, session protégée | Nmap avant et après |
 | Docker | Non root, `no-new-privileges`, base interne, 2 ports publiés | `docker compose config`, Nmap |
 | Boîtier | Secrets hors dépôt, compte à droits minimaux, effraction détectée | ACL, démo d'ouverture |
 | Détection | Accès refusés, rejeu, brouillage et rafales d'API transformés en incidents cyber | Incident visible pendant le pentest |
@@ -255,12 +258,12 @@ fusibles irréversibles. Ils sont présentés comme étape d'industrialisation.
 
 ### Mise en place
 
-1. CA locale, certificat serveur (SAN : 192.168.10.1, 192.168.10.2, `sentinel-pi`, `mosquitto`), chrony.
+1. CA locale, certificat serveur (SAN : 192.168.137.1, 127.0.0.1, `sentinel-pc`, `localhost`, `mosquitto`), NTP du PC.
 2. TLS sur Mosquitto, ACL ; fermeture de 1883.
 3. Certificat client par boîtier, puis `MOSQUITTO_CONF=mosquitto.mtls.conf`.
 4. Durcissement de l'hôte, puis Nmap ; preuves dans `docs/preuves/`.
 5. Avec Jeffrick : signaux cyber vers Sentinel Brain.
-6. Pentest croisé, avec le Pi 4 comme station d'audit.
+6. Pentest croisé, depuis un laptop de l'équipe comme station d'audit.
 
 ## 10. Personnalisation et intégration
 
@@ -274,9 +277,9 @@ pour les incidents, export CSV.
 
 ## 11. Fabrication et vidéo
 
-Le boîtier abrite le Pi 5 et l'ESP32-S3 dans deux compartiments séparés par une cloison. Une seule alimentation : le Pi 5
-(27 W) alimente l'ESP32-S3 par USB. Façade : fenêtre OLED (si disponible), dôme PIR, LED d'état visible, gravure laser.
-Couvercle : feuille de cuivre tactile. Aérations séparées pour le Pi et le MQ-2 ; le DHT11 loin des deux.
+Le boîtier n'abrite que l'ESP32-S3 et ses capteurs : il est plus petit et s'imprime plus vite. Alimentation par un câble
+USB depuis le PC serveur ou un chargeur 5 V. Façade : fenêtre OLED (si disponible), dôme PIR, LED d'état visible, gravure laser.
+Couvercle : feuille de cuivre tactile. Aération pour le MQ-2 ; le DHT11 loin de lui. La webcam, branchée au PC, est posée près du boîtier.
 
 Vidéo « Sentinel Drop » : accroche, boîtier, incrustation (dashboard, YOLO, Sentinel Score), outro ; 1080 × 1920,
 59 s maximum.
@@ -285,14 +288,14 @@ Vidéo « Sentinel Drop » : accroche, boîtier, incrustation (dashboard, YOLO, 
 
 | Jour | Assemblage | Contrôle du soir |
 | --- | --- | --- |
-| Lundi | Pi 5 et Pi 4 installés, Wi-Fi de table, socle Docker ; capteurs câblés sur l'ESP32-S3 ; CA générée | Vraies valeurs reçues sur 1883 |
+| Lundi | PC serveur préparé, Wi-Fi de table, socle Docker ; capteurs câblés sur l'ESP32-S3 ; CA générée | Vraies valeurs reçues sur 1883 |
 | Mardi | TLS, API, base, dashboard v1 ; firmware v1 (tâches, garde locale, tampon) ; YOLO mesuré ; Brain prototypé | Go / no-go à 18 h : vraie mesure au dashboard en TLS |
-| Mercredi | Brain et vision en production, Réglages, TLS mutuel ; boîtier assemblé ; captures et tournage | Démo complète jouée sans intervention, bascule Pi 4 répétée |
+| Mercredi | Brain et vision en production, Réglages, TLS mutuel ; boîtier assemblé ; captures et tournage | Démo complète jouée sans intervention, redémarrage du PC répété |
 | Jeudi | Gel du code, tag v1.0, pentest, rendus | Livrables déposés |
 | Vendredi | Allumage 10 minutes avant, simulateur en secours | Soutenance |
 
-Critères du go / no-go de mardi : latence YOLO sous 100 ms sur le Pi 5, stack complète sous 3 Go, pas de bridage,
-télémétrie TLS reçue. Si un critère échoue : bascule sur le Pi 4 ou réduction de la vision.
+Critères du go / no-go de mardi : latence YOLO sous 100 ms sur le PC serveur, stack complète stable,
+télémétrie TLS reçue. Si un critère échoue : réduction de la vision (taille d'image, images par seconde).
 
 **Socle d'abord, extensions ensuite.** Le socle (flux TLS de bout en bout, garde locale, Brain couches 1 à 3, vision
 avec zone) doit tourner mercredi midi. Les extensions (TLS mutuel, détection cyber complète, webhook, rôdeur) ne
@@ -305,4 +308,4 @@ s'ajoutent que si le socle est stable.
 - **Trois menaces dans un seul score**, avec des incidents nommés et expliqués.
 - Un détecteur d'effraction **sans composant** grâce au tactile de l'ESP32-S3.
 - La caméra se **surveille elle-même** (masquage, obscurité).
-- Un produit **personnalisable par site** sans toucher au code, et un **repli matériel** répété et chronométré.
+- Un produit **personnalisable par site** sans toucher au code, et un **redémarrage complet** répété et chronométré.

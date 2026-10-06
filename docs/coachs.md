@@ -8,3 +8,4 @@
 | Le kit contient-il webcam, OLED, buzzer et LEDs ? | | |
 | L'ESP32-S3 à la place de l'ESP8266 est-il validé ? | | |
 | Réservations Fablab et fond vert, heure exacte du rendu jeudi ? | | |
+| Serveur sur un PC Windows (sans Raspberry Pi) : accepté ? Que déposer au myDiL vendredi ? | | |

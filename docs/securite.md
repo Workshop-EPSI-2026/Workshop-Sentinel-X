@@ -5,7 +5,7 @@
 | Wi-Fi | Accès au réseau de table, brouillage | WPA2-AES, phrase longue, SSID dédié ; brouillage détecté par Brain (RSSI, déconnexions) | Configuration, incident « brouillage présumé » | |
 | MQTT | Écoute, faux boîtier, abonné anonyme, rejeu | TLS 8883 puis TLS mutuel, pas d'anonyme, ACL par topic, `seq` + `boot_id` contrôlés | Wireshark, client sans certificat refusé, rejeu détecté | |
 | API | Appels non authentifiés, payload malveillant, DoS | Clé d'API, authentification de l'interface, validation stricte, limitation de débit nginx | Tests de refus, incident cyber sur rafale 401/429 | |
-| SSH | Force brute | Clé ed25519 uniquement, pas de root, fail2ban | `sshd -T`, Nmap | |
+| Hôte (PC serveur) | Accès au PC, services Windows exposés | Pare-feu Windows refus par défaut (443, 8883, 123/udp), profil Public, partage de fichiers désactivé, pas de SSH, session verrouillée | `Get-NetFirewallRule`, Nmap | |
 | Docker | Évasion, exposition de la BDD | Non root, no-new-privileges, réseau interne, 2 ports publiés | `docker compose config`, Nmap | |
 | Boîtier | Ouverture, vol des secrets | Effraction tactile, secrets hors dépôt, compte à droits minimaux, certificat révocable | Démo d'ouverture, ACL | |
 | Caméra | Masquage, aveuglement | Détection d'image uniforme et de faible luminosité | Incident « sabotage » en démo | |

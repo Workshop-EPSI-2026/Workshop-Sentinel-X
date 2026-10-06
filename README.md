@@ -1,18 +1,18 @@
 # Sentinel-X
 
 > Workshop M1 EPSI 2026 · Mission Sentinel-X pour AetherCorp Industrial Solutions.
-> Boîtier de surveillance autonome : ESP32-S3 et capteurs, Raspberry Pi 5 embarqué (Option A, Pi 4 en repli),
-> détection multicouche (environnement, intrusion, cyber), flux chiffrés de bout en bout.
+> Boîtier de surveillance autonome : ESP32-S3 et capteurs, serveur hébergé sur un PC Windows (Docker Desktop),
+> détection multicouche (environnement, intrusion, cyber), flux chiffrés de bout en bout. Aucun Raspberry Pi.
 
 ## Équipe
 
 | Membre | Rôle |
 |---|---|
-| Constantin | Lead intégration · Backend · Stack Docker sur le Pi · Dashboard |
+| Constantin | Lead intégration · Backend · Stack Docker sur le PC serveur · Dashboard |
 | Jeffrick | Lead IA et data · Anomalies · Vision · BDD · Pitch |
 | Momo | Lead embarqué · Firmware ESP32-S3 · Câblage |
 | Lisa | Lead cybersécurité · PKI · Hardening · Audit · Dossier |
-| Michel | Raspberry Pi et réseau de table · Matériel · Fablab · Vidéo |
+| Michel | PC serveur et réseau de table · Matériel · Fablab · Vidéo |
 
 Répartition détaillée, binômes et charge : [`docs/repartition.md`](docs/repartition.md).
 
@@ -23,16 +23,20 @@ Référence complète : [`docs/architecture.md`](docs/architecture.md).
 ```
 ESP32-S3 N16R8 + DHT11 / MQ-2 / PIR / effraction tactile
    garde locale, alarme réflexe, tampon PSRAM, voyant RGB
-        │  Wi-Fi WPA2 (point d'accès du Pi 5) · MQTTS 8883 (TLS mutuel en cible)
+        │  Wi-Fi WPA2 (point d'accès mobile Windows du PC) · MQTTS 8883 (TLS mutuel en cible)
         ▼
-Raspberry Pi 5 (sentinel-pi, 192.168.10.1) — Docker Compose      Pi 4 (192.168.10.2) : repli + audit
-  ├─ mosquitto   8883 boîtiers [publié] · 8884 services [interne]
-  ├─ api         REST, WebSocket, incidents, profil de site
-  ├─ postgres    historique (réseau interne)
-  ├─ vision      YOLO NCNN, suivi, zone, caméra masquée, /video
-  ├─ anomaly     Sentinel Brain : 4 couches + fusion + score expliqué
-  └─ nginx       HTTPS/WSS + dashboard                         [publié : 443]
+PC serveur Windows 11 (sentinel-pc, 192.168.137.1)
+  ├─ Docker Desktop (WSL2) — Docker Compose
+  │    ├─ mosquitto   8883 boîtiers [publié] · 8884 services [interne]
+  │    ├─ api         REST, WebSocket, incidents, profil de site
+  │    ├─ postgres    historique (réseau interne)
+  │    ├─ anomaly     Sentinel Brain : 4 couches + fusion + score expliqué
+  │    └─ nginx       HTTPS/WSS + dashboard                    [publié : 443]
+  └─ vision (hors Docker, webcam USB)  YOLO, suivi, zone, caméra masquée, /video [127.0.0.1:8001]
 ```
+
+La vision tourne hors Docker parce que Docker Desktop sous Windows n'a pas accès à la webcam.
+Elle passe par nginx (`https://localhost`) comme n'importe quel client.
 
 Contrat : [`docs/contracts.md`](docs/contracts.md) · Câblage : [`docs/cablage.md`](docs/cablage.md) ·
 Réseau : [`docs/reseau.md`](docs/reseau.md) · Sécurité : [`docs/securite.md`](docs/securite.md) ·
@@ -47,21 +51,27 @@ Profil de site : [`config/site.example.yml`](config/site.example.yml).
 | `api/` | API REST + WebSocket | Constantin |
 | `dashboard/` | Interface web (compilée sur laptop) | Constantin |
 | `ai/vision/`, `ai/anomaly/` | Vision et Sentinel Brain | Jeffrick |
-| `infra/` | `docker-compose.yml`, Mosquitto, nginx, init PostgreSQL | Constantin, Michel |
+| `infra/` | `docker-compose.yml`, Mosquitto, nginx, init PostgreSQL ; préparation du PC serveur | Constantin, Michel |
 | `security/` | PKI (sans clés), hardening, audits | Lisa |
 | `docs/` | Contrat, réseau, câblage, fablab, preuves, dossier | Tous |
 | `tools/` | Création du dépôt, simulateur d'ESP | Constantin, Jeffrick |
 | `.github/` | CI, modèles d'issues et de PR, CODEOWNERS, plan du Kanban | Constantin |
 
-## Démarrer la stack (sur le Pi 5, ou le Pi 4 de repli)
+## Démarrer la stack (sur le PC serveur)
 
-```bash
-git clone <url-du-dépôt> sentinel-x && cd sentinel-x/infra
-cp .env.example .env             # remplir toutes les valeurs CHANGE_ME
-# créer infra/mosquitto/passwd : voir infra/mosquitto/README.md
+Prérequis : Windows 11, Docker Desktop (moteur WSL2), Git, Python 3.12. Préparer le PC avant le premier
+lancement (point d'accès, veille, pare-feu, NTP) : voir [`docs/reseau.md`](docs/reseau.md).
+
+```powershell
+git clone <url-du-dépôt> sentinel-x; cd sentinel-x\infra
+copy .env.example .env           # remplir toutes les valeurs CHANGE_ME
+# créer infra\mosquitto\passwd : voir infra/mosquitto/README.md
 docker compose up -d             # lundi : mosquitto + postgres, MQTT 1883 authentifié
 docker compose ps                # tous les services doivent être "healthy"
 ```
+
+Vision (dès qu'elle existe), dans un second terminal, depuis la racine du dépôt :
+`powershell -ExecutionPolicy Bypass -File ai\vision\run-windows.ps1`.
 
 Progression dans `infra/.env` :
 
@@ -70,7 +80,7 @@ Progression dans `infra/.env` :
 | Lundi | `docker-compose.yml:docker-compose.dev.yml` | `1883` / `false` | *(vide)* |
 | Dès que l'API existe | idem | idem | `app` |
 | Mardi, après les certificats de Lisa | `docker-compose.yml` | `8884` / `true` | `app` |
-| Dès que les services IA existent | `docker-compose.yml` | `8884` / `true` | `app,ai` |
+| Dès que Sentinel Brain existe | `docker-compose.yml` | `8884` / `true` | `app,ai` (vision lancée à part) |
 | TLS mutuel prêt | idem, avec `MOSQUITTO_CONF=mosquitto.mtls.conf` | `8884` / `true` | `app,ai` |
 
 Puis `docker compose up -d --build` à chaque changement.

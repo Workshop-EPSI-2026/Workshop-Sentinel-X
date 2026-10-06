@@ -21,7 +21,7 @@ Entrées analogiques utilisables avec le Wi-Fi actif : **GPIO 1 à 10** uniqueme
 | LED verte / rouge | anode | GPIO 11 / 12 | — | Résistance 220 Ω en série, si disponibles |
 | LED RGB intégrée | — | GPIO 48 | — | Voyant d'état (GPIO 38 sur certaines révisions) |
 
-Toutes les masses (GND) sont communes. Le 5 V vient de la broche **5Vin** de la carte, alimentée par l'USB du Pi 5.
+Toutes les masses (GND) sont communes. Le 5 V vient de la broche **5Vin** de la carte, alimentée par l'USB du PC serveur (ou un chargeur 5 V).
 
 ## Ordre de test
 

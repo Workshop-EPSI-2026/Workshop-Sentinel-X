@@ -1,21 +1,24 @@
 # =============================================================================
-#  Sentinel-X v2 — Stack serveur (Raspberry Pi 5, Option A)
-#  Le même fichier tourne tel quel sur le Raspberry Pi 4 de repli (arm64).
+#  Sentinel-X v2 — Stack serveur (PC serveur Windows 11, Docker Desktop WSL2)
+#  Le même fichier tourne tel quel sur un hôte Linux (amd64 ou arm64).
 #
-#  Démarrage :   cd infra && cp .env.example .env  (puis remplir .env)
+#  Démarrage :   cd infra && copy .env.example .env  (puis remplir .env)
 #                docker compose up -d
 #
 #  Profils (variable COMPOSE_PROFILES dans .env) :
 #    (aucun)   -> mosquitto + postgres          (lundi : socle)
 #    app       -> + api + nginx (dashboard)     (dès que l'API existe)
-#    ai        -> + vision + anomaly (Sentinel Brain)
+#    ai        -> + anomaly (Sentinel Brain)
+#    vision    -> + vision en conteneur : hôte Linux uniquement (/dev/video0).
+#                 Sous Windows, Docker Desktop n'accède pas à la webcam : la vision
+#                 tourne directement sur le PC (ai/vision/run-windows.ps1).
 #
 #  MQTT : 8883 = boîtiers (publié), 8884 = services (interne, jamais publié).
 #  Fichier Mosquitto choisi par MOSQUITTO_CONF : tls (mardi) puis mtls (TLS mutuel).
 #
 #  Règles de sécurité appliquées partout :
 #    - seuls 443 (HTTPS/WSS) et 8883 (MQTTS) sont publiés sur l'hôte
-#      (Docker contourne UFW : ne JAMAIS ajouter d'autres "ports:")
+#      (Docker contourne le pare-feu de l'hôte : ne JAMAIS ajouter d'autres "ports:")
 #    - base de données sur un réseau interne, jamais exposée
 #    - conteneurs non root, no-new-privileges, capabilities retirées
 #    - limites mémoire : total visé < 3 Go avec YOLO
@@ -156,6 +159,8 @@ services:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ../dashboard/dist:/usr/share/nginx/html:ro   # build fait sur un laptop (npm run build)
       - ../security/certs:/etc/nginx/certs:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"   # vision lancée sur le PC (hors Docker)
     networks:
       - app
     depends_on:
@@ -170,7 +175,7 @@ services:
   # ------------------------------------------------------------ IA vision ---
   vision:
     <<: *hardening
-    profiles: ["ai"]
+    profiles: ["vision"]               # hôte Linux uniquement (voir en-tête)
     build: ../ai/vision
     image: sentinel-x/vision:local
     container_name: snx-vision

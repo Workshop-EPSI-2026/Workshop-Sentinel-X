@@ -1,15 +1,14 @@
 # Contrat d'interface — Sentinel-X v2
 
 > Référence d'intégration. **Toute modification passe par une Pull Request et est annoncée au groupe.**
-> Horodatages : secondes Unix (UTC), fournis par le NTP local du Pi.
+> Horodatages : secondes Unix (UTC), fournis par le NTP local du PC serveur.
 
 ## Réseau
 
 | Élément | Valeur |
 | --- | --- |
-| Serveur principal | Raspberry Pi 5 `sentinel-pi`, 192.168.10.1 |
-| Serveur de repli | Raspberry Pi 4 `sentinel-pi4`, 192.168.10.2 (reprend .1 en cas de bascule) |
-| Boîtier | ESP32-S3 `esp-01`, 192.168.10.10 (réservée par MAC) |
+| Serveur | PC Windows 11 `sentinel-pc`, 192.168.137.1 (point d'accès mobile) |
+| Boîtier | ESP32-S3 `esp-01`, adresse DHCP ; se connecte toujours à 192.168.137.1 |
 | MQTT boîtiers | 8883 TLS (1883 authentifié le lundi uniquement), TLS mutuel en cible |
 | MQTT services | 8884 TLS, interne à Docker |
 | Web | 443 HTTPS / WSS |
@@ -79,7 +78,7 @@ plus vieille que 30 s ou dont l'`id` a déjà été vu.
 | `factors` | liste | `[{"name": "gas_ratio", "value": 1.38, "contribution": 0.62}, …]` |
 | `details` | objet | Zone, durée de présence, image, compteurs… |
 
-## Endpoints HTTP (via `https://sentinel-pi`)
+## Endpoints HTTP (via `https://192.168.137.1`, ou `https://localhost` sur le PC serveur)
 
 | Méthode | Route | Rôle | Authentification |
 | --- | --- | --- | --- |
