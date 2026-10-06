@@ -13,6 +13,24 @@ Variables reçues : `API_URL` (`https://localhost`), `API_CA` (CA pour vérifier
 `CAMERA_DEVICE` (index OpenCV, `VISION_CAMERA` dans `infra/.env`), `MODEL_PATH`, `SITE_PROFILE`.
 Le code doit donc accepter un index de caméra numérique et vérifier TLS avec `API_CA` lorsqu'elle est définie.
 
+## Modèle de détection : pas d'entraînement nécessaire
+YOLOv8n est pré-entraîné sur COCO, qui contient plus de 60 000 images de personnes : il détecte déjà les personnes,
+seule classe utilisée. Le travail consiste à choisir le format (PyTorch ou NCNN) et la taille d'image les plus rapides
+sur le PC serveur sans perte de détection, avec `vision/tools/yolo_bench.py` (tâche j2) :
+
+```powershell
+cd ai\vision
+.venv\Scripts\python tools\yolo_bench.py                  # webcam 0 ; ou --source <dossier d'images | vidéo>
+.venv\Scripts\python tools\yolo_bench.py --install 320    # installe models/yolov8n_ncnn_model
+```
+
+Le premier lancement télécharge `yolov8n.pt` (6 Mo) et exporte les modèles NCNN dans `vision/models/` (ignoré par Git).
+Sorties : `docs/preuves/latence-yolo.md` (tableau pour le jury) et `docs/preuves/yolo/` (images annotées).
+La taille installée doit être celle de `vision.imgsz` dans le profil de site : l'entrée d'un modèle NCNN est figée.
+
+Affinage seulement si les images annotées montrent des personnes manquées dans la salle (angle, contre-jour) :
+150 à 300 photos de la salle annotées, entraînement sur Google Colab (GPU), puis export NCNN sur le PC.
+
 ## Sentinel Brain en quatre couches
 1. **Qualité des données** : plausibilité (DHT11 0-50 °C, 20-90 %), capteur figé, trous de `seq`, rejeu (`boot_id` + `seq`).
 2. **Par capteur** : ligne de base EWMA, écart robuste (médiane, MAD), **CUSUM** pour les dérives lentes. Température lissée (pas de 1 °C du DHT11).

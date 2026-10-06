@@ -353,6 +353,7 @@ taches:
   - 'Sur le PC serveur, hors Docker : capture 640×480, classe personne, PyTorch puis export NCNN (et OpenVINO),
     puis imgsz=320 ; ms par image sur 200 images.'
   - Tester model.track (suivi) pour le temps de présence.
+  - 'Outil prêt : ai/vision/tools/yolo_bench.py (mesures, tableau, images annotées, installation du modèle).'
   - 'Tableau format / taille / ms / FPS / machine dans docs/preuves/latence-yolo.md : preuve d’optimisation pour
     le jury.'
   fini_quand: Meilleure configuration retenue, tableau commité.
