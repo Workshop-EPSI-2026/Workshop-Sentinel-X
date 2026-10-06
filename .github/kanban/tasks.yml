@@ -291,6 +291,8 @@ taches:
   - Client MQTT abonné à sentinel/+/telemetry, event, health et status ; diffusion WebSocket vers le front.
   - Contrôle de seq et boot_id à l’ingestion (trous et rejeu signalés).
   - Tester avec le simulateur de Jeffrick.
+  - 'Code prêt (api/app/, testé avec le simulateur et une vraie pile Docker) : ingestion validée, doublons du tampon écartés,
+    WebSocket authentifié. Les trous de seq sont détectés par Sentinel Brain (couche 1), pas par l’API. À relire : api/README.md.'
   fini_quand: Une donnée simulée publiée sur MQTT arrive en WebSocket.
   fait: false
 - id: c3
@@ -562,6 +564,8 @@ taches:
   detail:
   - 'Schéma BDD (Jeffrick) : telemetry, events, health, alerts (statut, facteurs), commands, config_versions, audit_log.'
   - Écriture par l’API, GET historique paginé, enregistrement continu pour l’entraînement.
+  - 'Schéma créé par l’API elle-même (migrations dans api/app/db.py, aucun SQL à lancer) ; tables et conservation : api/README.md.
+    Reste à Jeffrick : export CSV étiqueté pour l’entraînement de Brain.'
   fini_quand: Les données de la journée sont en BDD et relisibles.
   fait: false
 - id: c6

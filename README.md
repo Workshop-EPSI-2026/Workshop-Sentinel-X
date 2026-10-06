@@ -192,6 +192,9 @@ docker compose ps                # tous les services doivent être "healthy"
 Vision (dès qu'elle existe), dans un second terminal, depuis la racine du dépôt :
 `powershell -ExecutionPolicy Bypass -File ai\vision\run-windows.ps1`.
 
+Sous Windows, `COMPOSE_FILE` exige le séparateur `;` : la ligne `COMPOSE_PATH_SEPARATOR=:` de `infra/.env.example`
+le fixe à `:` pour que les valeurs ci-dessous fonctionnent telles quelles. Ne pas la supprimer.
+
 Progression dans `infra/.env` :
 
 | Moment | `COMPOSE_FILE` | `MQTT_PORT` / `MQTT_TLS` | `COMPOSE_PROFILES` |

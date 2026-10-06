@@ -12,12 +12,14 @@
 
 ```powershell
 docker run --rm -v "${PWD}\mosquitto:/m" eclipse-mosquitto:2.0 sh -c `
-  'mosquitto_passwd -c -b /m/passwd esp-01 ''MDP_ESP'' && mosquitto_passwd -b /m/passwd api ''MDP_API'' && mosquitto_passwd -b /m/passwd anomaly ''MDP_ANOMALY'' && mosquitto_passwd -b /m/passwd monitor ''MDP_MONITOR'''
+  'mosquitto_passwd -c -b /m/passwd esp-01 ''MDP_ESP'' && mosquitto_passwd -b /m/passwd api ''MDP_API'' && mosquitto_passwd -b /m/passwd anomaly ''MDP_ANOMALY'' && mosquitto_passwd -b /m/passwd monitor ''MDP_MONITOR'' && chown 1883:1883 /m/passwd && chmod 600 /m/passwd'
 docker compose restart mosquitto
 ```
 
-Mots de passe sans apostrophe ni espace. Docker Desktop ignore les droits du fichier (pas de `chown` ni de `chmod`) :
-Mosquitto peut signaler que `passwd` est lisible par tous, sans conséquence ici.
+Mots de passe sans apostrophe ni espace. Le `chown` final est indispensable : le fichier est créé par `root` avec des
+droits restreints, et Mosquitto (compte 1883) répond sinon `Unable to open pwfile` et le conteneur reste « unhealthy ».
+Il s'exécute dans le conteneur d'aide, donc il fonctionne aussi sous Windows.
+Un avertissement `aclfile group is not mosquitto` s'affiche ensuite : il est sans conséquence sur Docker Desktop.
 
 Les mots de passe `api` et `anomaly` doivent être identiques à ceux de `infra/.env`,
 celui d'`esp-01` à celui de `firmware/include/secrets.h`.

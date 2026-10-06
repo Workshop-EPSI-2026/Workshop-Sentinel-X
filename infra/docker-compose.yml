@@ -123,9 +123,12 @@ services:
       OPERATOR_TOKEN: ${OPERATOR_TOKEN:?définir OPERATOR_TOKEN dans .env}
       SITE_PROFILE: /config/site.yml
       WEBHOOK_URL: ${WEBHOOK_URL:-}
+      VISION_HEALTH_URL: ${VISION_HEALTH_URL:-http://host.docker.internal:8001/health}   # vision lancée sur le PC
     volumes:
       - ../security/certs/ca.crt:/certs/ca.crt:ro
       - ../config/${SITE_PROFILE_FILE:-site.example.yml}:/config/site.yml:ro   # profil initial
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     networks:
       - app
       - data

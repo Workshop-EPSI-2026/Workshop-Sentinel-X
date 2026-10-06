@@ -95,11 +95,13 @@ plus vieille que 30 s ou dont l'`id` a déjà été vu.
 
 ## Formats attendus par le dashboard
 
-Proposition issue du dashboard (`dashboard/src/types.ts`), à confirmer à l'implémentation de l'API.
+Implémentés par l'API (`api/app/`, testés de bout en bout) et attendus par le dashboard (`dashboard/src/types.ts`).
 Le mode démo du dashboard simule exactement ces formats.
 
 **Authentification opérateur** : en-tête `Authorization: Bearer <OPERATOR_TOKEN>` ; réponse 401 si le jeton est refusé.
-Exception : `/video?token=<OPERATOR_TOKEN>`, car une balise `<img>` ne peut pas envoyer d'en-tête.
+Les services (vision, Brain) s'authentifient sur `POST /api/v1/alerts` par l'en-tête `X-API-Key: <API_KEY>`.
+Exception : `/video?token=<OPERATOR_TOKEN>`, car une balise `<img>` ne peut pas envoyer d'en-tête (c'est le service
+vision qui doit vérifier ce jeton : l'API n'est pas sur ce chemin).
 
 **WebSocket `/ws`** : le client envoie d'abord `{"type": "auth", "token": "…"}` (jamais de jeton dans l'URL, qui
 finirait dans les journaux nginx). L'API répond `{"type": "ready"}`, ou ferme avec le code 4401. Elle pousse ensuite
@@ -116,10 +118,11 @@ finirait dans les journaux nginx). L'API répond `{"type": "ready"}`, ou ferme a
 
 | Route | Corps envoyé | Réponse |
 | --- | --- | --- |
-| `GET /api/v1/alerts` | — | Liste d'incidents |
+| `POST /api/v1/alerts` | Alerte du contrat (clé d'API) | 201 avec l'incident ; regroupé avec l'incident non résolu du même type sur le même boîtier (`count` + 1, gravité jamais abaissée) |
+| `GET /api/v1/alerts?status=&domain=` | — | Liste d'incidents, du plus récent au plus ancien |
 | `PATCH /api/v1/alerts/{id}` | `{"status": "acknowledged"}` ou `"resolved"` | Incident mis à jour |
 | `GET /api/v1/telemetry?device=&from=` | — | `{"items": [télémétrie…], "next": <from suivant> ou null}`, trié par `ts` croissant |
-| `POST /api/v1/commands` | `{"device_id": "esp-01", "cmd": "alarm", "on": true}` (champs de la commande) | 202 ou 204 ; l'API ajoute `id` et `ts` avant publication |
+| `POST /api/v1/commands` | `{"device_id": "esp-01", "cmd": "alarm", "on": true}` (champs de la commande : `on` pour `alarm`, `color` pour `led`, `value` pour `mode`) | 202 avec la commande publiée, `id` et `ts` ajoutés par l'API ; 503 si le broker est injoignable |
 | `GET /api/v1/config` | — | `{"version", "updated_at", "profile"}` ; `profile` = profil de site en JSON (structure de `config/site.example.yml`) |
 | `PUT /api/v1/config` | `{"profile": {…}}` | Même réponse que `GET`, version incrémentée |
 | `GET /api/v1/score` | — | Dernier score, ou `null` |
