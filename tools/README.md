@@ -2,8 +2,8 @@
 
 | Fichier | Rôle | Responsable |
 |---|---|---|
-| `setup-poste.ps1` | Installe l'environnement commun d'un poste Windows, par rôle (`serveur` = PC de la démo) | Tous |
-| `doctor.py` | Contrôle un poste (`--role`), le PC serveur (`--role serveur`) ou un serveur Linux / Raspberry Pi (`--linux`) | Tous |
+| `setup-poste.ps1` | Installe **tout** le projet sur un poste Windows, le même pour tous (lancé par `installer.cmd` à la racine) | Tous |
+| `doctor.py` | Contrôle un poste ; `--serveur` (ou `verifier-serveur.cmd`) dit s'il peut être le serveur ; `--linux` pour Linux / Raspberry Pi | Tous |
 | `serveur-pc.ps1` | PC serveur, en administrateur : pare-feu (443, 8883), NTP pour l'ESP, point d'accès Wi-Fi 2,4 GHz, vérification | Michel, Lisa |
 | `demarrer.ps1` | PC serveur : démarre Docker Desktop, la stack et la vision ; `-Arreter` arrête tout | Tous |
 | `simulator.py` | Simulateur d'ESP32-S3 au format du contrat (tâche j1) | Jeffrick |

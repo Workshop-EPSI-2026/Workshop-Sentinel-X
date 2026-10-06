@@ -3,3 +3,5 @@
 *.jpg binary
 *.stl binary
 *.f3d binary
+*.cmd text eol=crlf
+*.bat text eol=crlf

@@ -55,7 +55,7 @@ Généré par `python tools/repartition.py` depuis `.github/kanban/tasks.yml` ; 
 | g3 | Questions aux coachs | Lundi 11h15 – 12h30 | 10 min | — |  | Réponses notées dans le dépôt (docs/coachs.md). |
 | g5 | Contrat d’interface | Lundi 11h15 – 12h30 | 30 min | Momo, Jeffrick | **oui** | docs/contracts.md commité et annoncé au groupe. |
 | g7 | Dépôt Git, Kanban et conventions | Lundi 11h15 – 12h30 | 15 min | — |  | Tout le monde a cloné et fait un premier commit. |
-| p1 | Préparer le PC serveur (Windows 11, Docker Desktop, vision) | Lundi 13h30 – 17h30 | 1 h | Michel | **oui** | python tools\doctor.py --role serveur sans [KO] sur les deux PC, docker run hello-world passe, la webcam donne une image. |
+| p1 | Choisir le poste serveur (verifier-serveur.cmd) et le préparer | Lundi 13h30 – 17h30 | 1 h | Michel | **oui** | verifier-serveur.cmd sans [KO] sur les deux PC, docker run hello-world passe, la webcam donne une image. |
 | c1 | Stack Docker minimale sur le PC serveur | Lundi 13h30 – 17h30 | 1 h 30 | — | **oui** | mosquitto_pub/sub fonctionne avec identifiants depuis un autre poste connecté au point d’accès du PC. |
 | c2 | API squelette | Lundi 13h30 – 17h30 | 2 h | — | **oui** | Une donnée simulée publiée sur MQTT arrive en WebSocket. |
 | c3 | Passation MQTT serveur à Lisa | Lundi 13h30 – 17h30 | 45 min | — |  | Lisa sait lancer et lire un abonnement MQTT seule. |
@@ -123,7 +123,7 @@ Généré par `python tools/repartition.py` depuis `.github/kanban/tasks.yml` ; 
 | ID | Tâche | Créneau | Durée | Avec | Bloquant | Fini quand |
 |---|---|---|---|---|---|---|
 | g6 | Plan IP et Wi-Fi de table | Lundi 11h15 – 12h30 | 20 min | Lisa | **oui** | Tableau dans docs/reseau.md. |
-| p1 | Préparer le PC serveur (Windows 11, Docker Desktop, vision) | Lundi 13h30 – 17h30 | 1 h | Constantin | **oui** | python tools\doctor.py --role serveur sans [KO] sur les deux PC, docker run hello-world passe, la webcam donne une image. |
+| p1 | Choisir le poste serveur (verifier-serveur.cmd) et le préparer | Lundi 13h30 – 17h30 | 1 h | Constantin | **oui** | verifier-serveur.cmd sans [KO] sur les deux PC, docker run hello-world passe, la webcam donne une image. |
 | m1 | Câblage ESP32-S3 et test de chaque composant | Lundi 13h30 – 17h30 | 2 h | Momo | **oui** | Chaque capteur donne une valeur cohérente au moniteur série ; mesures relevées dans docs/cablage.md. |
 | mi1 | Point d’accès Wi-Fi du PC serveur | Lundi 13h30 – 17h30 | 1 h | — | **oui** | L’ESP obtient une adresse 192.168.137.x et joint le broker sur 192.168.137.1. |
 | mi2 | Mesures et esquisse du boîtier | Lundi 13h30 – 17h30 | 1 h | — |  | Esquisse cotée dans Fusion 360, créneau réservé. |

@@ -3,7 +3,7 @@
 > Source unique des versions de l'équipe. **Toute modification passe par une Pull Request.**
 > **Politique** : seules les versions publiées avant le **15 août 2026** sont retenues (`EXCLUDE_NEWER` dans
 > `tools/lock_deps.py`), pour éviter les versions trop récentes et pas encore éprouvées.
-> Contrôle d'un poste : `python tools/doctor.py --role <rôle>` · du PC serveur : `python tools/doctor.py --role serveur`.
+> Installation de tout le projet : `installer.cmd` · contrôle d'un poste : `python tools/doctor.py` · capacité serveur : `verifier-serveur.cmd`.
 
 ## Postes Windows
 
@@ -15,7 +15,7 @@
 | Extensions VS Code | liste commune | `.vscode/extensions.json` |
 | Règles Python (Ruff 0.16.3) | communes | `ruff.toml` |
 | Git, GitHub CLI, VS Code, Docker Desktop (moteur WSL 2) | dernière version stable via winget | `tools/setup-poste.ps1` |
-| PC serveur : vision (PyTorch CPU, Ultralytics, OpenCV) et modèle `yolov8n.pt` | versions exactes | `tools/setup-poste.ps1 -Role serveur` |
+| Vision (PyTorch CPU, Ultralytics, OpenCV) et modèle `yolov8n.pt`, sur tous les postes | versions exactes | `installer.cmd` |
 
 ## Services (images Docker)
 
@@ -54,7 +54,7 @@ Raspberry Pi (arm64).
 Get-FileHash ai\vision\models\yolov8n.pt -Algorithm SHA256
 ```
 
-Le fichier est téléchargé par `setup-poste.ps1 -Role serveur` ; le PC de secours vérifie la même empreinte.
+Le fichier est téléchargé par `installer.cmd` ; le PC de secours vérifie la même empreinte.
 
 ## Mettre à jour une dépendance Python
 
