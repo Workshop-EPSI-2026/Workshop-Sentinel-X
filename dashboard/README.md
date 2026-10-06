@@ -14,6 +14,21 @@ npm run build        # dist/ servi par nginx : https://192.168.137.1 (ou https:/
 
 Pour viser un autre serveur pendant le développement : `$env:VITE_API_TARGET="https://192.168.137.1"; npm run dev`.
 
+## Brancher sur l'API réelle
+
+L'API tourne dans Docker et n'est joignable que par nginx (HTTPS sur le PC serveur). Deux façons de développer :
+
+- **Avec la pile Docker complète** : `cd infra; docker compose up -d --build` (profil `app`, certificats prêts), puis
+  `npm run dev` : le relais Vite vise `https://localhost` (nginx) par défaut.
+- **Sans nginx, avec l'API lancée à la main** (voir `api/README.md`, `python dev.py`) :
+  ```powershell
+  $env:VITE_API_TARGET="http://127.0.0.1:8000"; npm run dev
+  ```
+
+Sur l'écran de connexion, saisir `OPERATOR_TOKEN` (`infra/.env`). Vérifié de bout en bout dans Chrome (connexion,
+mesures en direct du simulateur, incident reçu sans recharger, acquittement, commande, enregistrement des réglages,
+reconnexion automatique quand l'API redémarre).
+
 ## Mode démo (sans API)
 
 Bouton **Mode démo** sur l'écran de connexion, ou lien direct `/?demo`. Le simulateur (`src/api/demo.ts`) produit le
