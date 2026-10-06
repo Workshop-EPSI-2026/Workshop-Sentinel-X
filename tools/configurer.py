@@ -4,6 +4,7 @@
     python tools/configurer.py            # crée ce qui manque, ne touche pas à ce qui existe déjà
     python tools/configurer.py --afficher # réaffiche les mots de passe des comptes esp-01 et monitor
     python tools/configurer.py --refaire  # régénère tous les secrets (les anciens ne marchent plus)
+    python tools/configurer.py --mail adresse@gmail.com   # mails d'alerte envoyés depuis et vers cette adresse Gmail
 
 - infra/.env : copie de infra/.env.example, chaque CHANGE_ME remplacé par un secret aléatoire, mode socle (1883),
   profils « app,ai » (API, dashboard, Sentinel Brain).
@@ -17,6 +18,7 @@ from __future__ import annotations
 
 import argparse
 import base64
+import getpass
 import hashlib
 import os
 import re
@@ -82,6 +84,46 @@ def complete_env(values: dict[str, str]) -> dict[str, str]:
     return read_env(ENV)
 
 
+def set_env(updates: dict[str, str]) -> None:
+    """Remplace (ou ajoute) des variables de infra/.env sans toucher au reste du fichier."""
+    text = ENV.read_text(encoding="utf-8")
+    for key, value in updates.items():
+        line = f"{key}={value}"
+        if re.search(rf"(?m)^{key}=", text):
+            text = re.sub(rf"(?m)^{key}=.*$", lambda _m, ln=line: ln, text)
+        else:
+            text += ("" if text.endswith("\n") else "\n") + line + "\n"
+    ENV.write_text(text, encoding="utf-8", newline="\n")
+
+
+def configure_mail(address: str, others: str | None) -> dict[str, str]:
+    """Mails d'alerte depuis une adresse (Gmail par défaut) vers elle-même et d'éventuels autres destinataires."""
+    address = address.strip()
+    if not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", address):
+        raise SystemExit(f"[KO] adresse mail invalide : {address!r}")
+    to = [address] + [x.strip() for x in (others or "").replace(";", ",").split(",") if x.strip()]
+    updates = {"SMTP_USER": address, "SMTP_FROM": address, "NOTIFY_TO": ", ".join(dict.fromkeys(to))}
+    domain = address.rsplit("@", 1)[1].lower()
+    if domain in ("gmail.com", "googlemail.com"):
+        updates.update({"SMTP_HOST": "smtp.gmail.com", "SMTP_PORT": "587"})
+    elif domain in ("outlook.com", "hotmail.com", "hotmail.fr", "live.fr", "live.com"):
+        updates.update({"SMTP_HOST": "smtp-mail.outlook.com", "SMTP_PORT": "587"})
+    elif not read_env(ENV).get("SMTP_HOST"):
+        print(f"[!!] serveur SMTP de {domain} inconnu : renseigner SMTP_HOST et SMTP_PORT dans infra/.env")
+    if not read_env(ENV).get("SMTP_PASSWORD"):
+        print("Mot de passe d'application de la messagerie (Gmail : compte Google > Sécurité > Validation en deux étapes >")
+        print("Mots de passe des applications ; 16 lettres). Laisser vide pour le saisir plus tard dans infra/.env.")
+        try:
+            pwd = getpass.getpass("Mot de passe d'application (rien ne s'affiche) : ").replace(" ", "")
+        except (EOFError, KeyboardInterrupt):
+            pwd = ""
+        if pwd:
+            updates["SMTP_PASSWORD"] = pwd
+    set_env(updates)
+    print(f"[OK] mails d'alerte : de {address} vers {updates['NOTIFY_TO']} ({updates.get('SMTP_HOST', 'SMTP existant')})")
+    return read_env(ENV)
+
+
 def write_passwd(values: dict[str, str]) -> None:
     lines = [f"{user}:{mosquitto_hash(values[var])}" for user, var in ACCOUNTS.items()]
     PASSWD.write_text("\n".join(lines) + "\n", encoding="utf-8", newline="\n")
@@ -95,6 +137,9 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--refaire", action="store_true", help="régénère .env et passwd (nouveaux secrets)")
     ap.add_argument("--afficher", action="store_true", help="affiche seulement les mots de passe esp-01 et monitor")
+    ap.add_argument("--mail", metavar="ADRESSE", help="mails d'alerte : envoyés depuis et vers cette adresse (Gmail : "
+                    "demande le mot de passe d'application)")
+    ap.add_argument("--destinataires", metavar="LISTE", help="autres destinataires, séparés par des virgules")
     a = ap.parse_args(argv)
 
     if a.afficher:
@@ -121,6 +166,8 @@ def main(argv: list[str] | None = None) -> int:
         values = read_env(ENV)
         print("[OK] infra/.env : profils app et ai (API et dashboard ajoutés)")
 
+    if a.mail:
+        values = configure_mail(a.mail, a.destinataires)
     missing = [var for var in ACCOUNTS.values() if not values.get(var)]
     if missing:
         print(f"[KO] infra/.env : variables vides {', '.join(missing)} (relancer avec --refaire)")
@@ -138,7 +185,13 @@ def main(argv: list[str] | None = None) -> int:
     print(f"  monitor : {values['MQTT_MONITOR_PASSWORD']}   -> pour regarder les messages (mosquitto_sub)")
     print(f"  jeton opérateur : {values.get('OPERATOR_TOKEN', '?')}   -> connexion au dashboard")
     if not values.get("SMTP_HOST"):
-        print("\nMails d'alerte : pas encore configurés (SMTP_* et NOTIFY_TO dans infra/.env) ; la voix fonctionne déjà.")
+        print("\nMails d'alerte : pas encore configurés ; la voix fonctionne déjà. Pour les activer :")
+        print("  python tools\\configurer.py --mail votre.adresse@gmail.com")
+    elif not values.get("SMTP_PASSWORD"):
+        print("\nMails d'alerte : il manque SMTP_PASSWORD (mot de passe d'application) dans infra/.env.")
+    else:
+        print(f"\nMails d'alerte : vers {values.get('NOTIFY_TO', '?')}. Essai : cd ai\\notify puis "
+              "..\\..\\.venv\\Scripts\\python.exe -m app.main --env ..\\..\\infra\\.env --tester")
     print("\nÉtape suivante : powershell -ExecutionPolicy Bypass -File tools\\demarrer.ps1")
     return 0
 
