@@ -15,15 +15,16 @@ Exemples :
   # broker local de test (docker run -p 1883:1883 eclipse-mosquitto:2.0 mosquitto -c /mosquitto-no-auth.conf)
   python tools/simulator.py --host localhost --scenario gas_leak
 
-  # Pi, lundi (1883 authentifié)
-  python tools/simulator.py --host 192.168.10.1 --user esp-01 --password '...' --scenario all
+  # PC serveur, socle (1883 authentifié)
+  python tools/simulator.py --host localhost --user esp-01 --password '...' --scenario all
 
-  # Pi, dès mardi (TLS 8883)
-  python tools/simulator.py --host 192.168.10.1 --port 8883 --tls --cafile security/certs/ca.crt \\
+  # PC serveur, TLS (8883) ; depuis un autre poste du point d'accès : --host 192.168.137.1
+  python tools/simulator.py --host localhost --port 8883 --tls --cafile security/certs/ca.crt \\
       --user esp-01 --password '...'
 
-  # jeu de données étiqueté pour le prototype de Brain, sans broker, 60 fois plus vite
-  python tools/simulator.py --no-mqtt --scenario all --speed 60 --csv ai/anomaly/data/simu.csv
+  # jeu de données étiqueté pour le prototype de Brain, sans broker, instantané et reproductible
+  python tools/simulator.py --no-mqtt --scenario all --cooldown 600 --speed 100000 --seed 42 \\
+      --csv ai/anomaly/data/simu.csv --rx-log ai/anomaly/data/simu_rx.jsonl
 """
 from __future__ import annotations
 
@@ -83,8 +84,8 @@ class Sensors:
 def anomaly_effect(name: str, s: Sensors, since: float, dt: float, rng: random.Random) -> dict:
     """Applique l'effet du scénario pendant sa phase active. Renvoie des drapeaux."""
     flags: dict = {}
-    if name == "drift":                       # +0,5 °C par minute, gaz stable
-        s.temp += 0.5 / 60.0 * dt * 1.6
+    if name == "drift":                       # panne de climatisation : +0,6 °C/min tant qu'elle dure, gaz stable
+        s.temp += 0.6 / 60.0 * dt + (s.temp - 22.0) * min(1.0, dt / 300.0)   # annule le retour naturel à 22 °C
     elif name == "gas_leak":                  # ratio gaz vers 2,2 en ~5 min, température stable
         target = 420.0 * (1.0 + 1.2 * min(1.0, since / 300.0))
         s.gas_mv += (target - s.gas_mv) * min(1.0, dt / 20.0)
@@ -96,7 +97,7 @@ def anomaly_effect(name: str, s: Sensors, since: float, dt: float, rng: random.R
     elif name == "intrusion":                 # passages répétés devant le PIR
         flags["pir_rate"] = 0.35
     elif name == "tamper":                    # main sur le couvercle, une fois
-        flags["tamper"] = since < dt + 1e-9
+        flags["tamper"] = since < dt / 2          # premier pas de la phase seulement
     elif name == "jamming":                   # RSSI qui s'effondre, puis coupure
         s.rssi += (-92.0 - s.rssi) * min(1.0, dt / 25.0)
         flags["offline"] = since > 60.0
@@ -115,7 +116,8 @@ class Simulator:
         self.base = f"sentinel/{self.device}"
         self.boot_id = uuid.UUID(int=self.rng.getrandbits(128)).hex[:8] if a.seed is not None else uuid.uuid4().hex[:8]
         self.seq = 0
-        self.t0 = time.time()
+        # graine fixée : horloge de départ fixe aussi, pour un jeu de données identique octet pour octet
+        self.t0 = 1_790_000_000.0 if a.seed is not None else time.time()
         self.sim_t = 0.0                  # secondes simulées depuis le démarrage
         self.gas_baseline: float | None = None
         self.ewma_gas: float | None = None
@@ -129,6 +131,8 @@ class Simulator:
         self.client = None
         self.csv_writer = None
         self.csv_file = None
+        self.rx_file = None
+        self.cur_label = "normal"
         self.plan = self._build_plan()
 
     # ---- plan de scénarios : liste de (nom, début, fin) en secondes simulées
@@ -187,6 +191,10 @@ class Simulator:
         self.pub("status", "online", qos=1, retain=True, raw=True)
 
     def pub(self, sub: str, payload, qos: int = 0, retain: bool = False, raw: bool = False) -> None:
+        if self.rx_file:   # journal de ce que le broker reçoit, dans l'ordre d'arrivée
+            self.rx_file.write(json.dumps({"rx_ts": round(self.t0 + self.sim_t, 3), "topic": f"{self.base}/{sub}",
+                                           "payload": payload, "label": self.cur_label},
+                                          separators=(",", ":"), ensure_ascii=False) + "\n")
         if self.a.verbose:
             print(f"{self.base}/{sub} {payload if raw else json.dumps(payload, ensure_ascii=False)}", flush=True)
         if self.client is None:
@@ -266,6 +274,8 @@ class Simulator:
 
     # ---- CSV étiqueté
     def open_csv(self) -> None:
+        if self.a.rx_log:
+            self.rx_file = open(self.a.rx_log, "w", encoding="utf-8")
         if not self.a.csv:
             return
         self.csv_file = open(self.a.csv, "w", newline="", encoding="utf-8")
@@ -295,6 +305,7 @@ class Simulator:
                 act = self.active()
                 name, since = (act if act else ("normal", 0.0))
                 label = name if act else (self.recovering() or "normal")
+                self.cur_label = label
                 self.s.step(tick, self.sim_t)
                 flags = anomaly_effect(name, self.s, since, tick, self.rng) if act else {}
 
@@ -355,6 +366,9 @@ class Simulator:
             if self.csv_file:
                 self.csv_file.close()
                 print(f"[sim] CSV écrit : {self.a.csv}", flush=True)
+            if self.rx_file:
+                self.rx_file.close()
+                print(f"[sim] journal de réception écrit : {self.a.rx_log}", flush=True)
             if self.client is not None:
                 self.pub("status", "offline", qos=1, retain=True, raw=True)
                 time.sleep(0.3)
@@ -387,7 +401,9 @@ def parse_args(argv=None) -> argparse.Namespace:
     s.add_argument("--duration", type=float, default=0, help="durée totale (s simulées), 0 = selon le scénario, infini en normal")
     s.add_argument("--speed", type=float, default=1.0, help="accélération du temps (60 = 1 min par seconde)")
     s.add_argument("--seed", type=int, help="graine aléatoire (jeu de données reproductible)")
-    s.add_argument("--csv", help="écrit la télémétrie étiquetée dans ce fichier")
+    s.add_argument("--csv", help="écrit la télémétrie étiquetée dans ce fichier (vue capteurs)")
+    s.add_argument("--rx-log", help="écrit en JSONL tout ce que le broker reçoit (vue réseau : rejeux, coupures, "
+                                    "événements, santé) ; c'est l'entrée du prototype de Sentinel Brain")
     s.add_argument("-v", "--verbose", action="store_true", help="affiche chaque message")
     a = p.parse_args(argv)
     if a.period < 1.0:

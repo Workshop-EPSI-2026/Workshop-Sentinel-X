@@ -253,6 +253,9 @@ def sync(repo, owner, plan, handles, with_project):
                 cmd += ["--add-label", lab]
             r = run(cmd, check=False)
             print(f"  mis à jour  {title}" + ("" if r is not None or DRY else "  (échec)"))
+            if t.get("fait"):                      # tâche faite dans tasks.yml : l'issue est fermée
+                run(["gh", "issue", "close", str(existing[t["id"]]["number"]), "-R", repo, "--reason", "completed"],
+                    check=False, quiet=True)
         else:
             base = ["gh", "issue", "create", "-R", repo, "--title", title, "--body", body(t),
                     "--milestone", t["jour"]]
@@ -264,6 +267,12 @@ def sync(repo, owner, plan, handles, with_project):
             if url:
                 new_urls.append(url)
             print(f"  créé        {title}")
+    planned = {t["id"] for t in plan["taches"]}
+    for tid, issue in existing.items():          # tâche retirée du plan : fermée avec un commentaire
+        if tid not in planned:
+            run(["gh", "issue", "close", str(issue["number"]), "-R", repo, "--reason", "not planned",
+                 "--comment", "Tâche retirée du plan d'équipe (voir .github/kanban/tasks.yml)."], check=False)
+            print(f"  fermé       [{tid}] (retiré du plan)")
     if with_project and new_urls:
         step("Ajout des nouvelles tâches au Kanban")
         out = run(["gh", "project", "list", "--owner", owner, "--format", "json"], check=False, quiet=True)

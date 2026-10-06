@@ -1,18 +1,18 @@
-# Sentinel-X v2 — tâches du plan d'équipe (source unique du Kanban)
+# Sentinel-X v3 — tâches du plan d'équipe (source unique du Kanban)
 # Lu par tools/bootstrap_github.py : création des issues, puis --sync pour mettre à jour titres et contenus.
 # Pour ajouter une tâche en cours de semaine : utiliser plutôt le formulaire d'issue « Tâche ».
 jalons:
 - titre: Lundi
-  description: 'En groupe, maintenant — Tout le monde ensemble. Objectif : décisions prises et schémas prêts pour
-    la validation coach.'
+  description: 'En groupe, maintenant — Tout le monde ensemble. Objectif : décisions prises et schémas prêts pour la validation
+    coach.'
 - titre: Mardi
-  description: 'Production — Objectif du soir : une vraie mesure de l’ESP affichée sur le dashboard servi par le
-    Pi, décision go / no-go sur le Pi, boîtier en impression.'
+  description: 'Production — Objectif du soir : une vraie mesure de l’ESP affichée sur le dashboard servi par le PC serveur,
+    vision branchée, décision go / no-go, boîtier en impression.'
 - titre: Mercredi
   description: Intégration globale — Tous les blocs reliés. Captures d’écran pour la vidéo avant midi.
 - titre: Jeudi
-  description: Gel du code, pentest et rendus — Code gelé le matin. Pentest l’après-midi. Tous les livrables numériques
-    déposés le soir.
+  description: Gel du code, pentest et rendus — Code gelé le matin. Pentest l’après-midi. Tous les livrables numériques déposés
+    le soir.
 - titre: Vendredi
   description: Soutenance — Prototype déposé au myDiL le matin, passage de 10 minutes chrono.
 labels:
@@ -24,7 +24,7 @@ labels:
   description: Vision et Sentinel Brain
 - nom: infra
   couleur: 0E8A16
-  description: Raspberry Pi, Docker, base de données
+  description: PC serveur, Docker, base de données
 - nom: reseau
   couleur: 006B75
   description: Point d'accès, plan IP
@@ -80,7 +80,7 @@ taches:
   fini_quand: Chacun connaît son rôle et ses binômes.
   fait: true
 - id: g2
-  titre: Acter l’Option A (Pi 5) et le repli sur le Pi 4
+  titre: 'Acter l’Option B : PC portable serveur (Windows 11 + Docker Desktop)'
   jour: Lundi
   creneau: Lundi 11h15 – 12h30
   duree: 10 min
@@ -93,13 +93,11 @@ taches:
   - infra
   - bloquant
   detail:
-  - 'Option A : Raspberry Pi 5 dans le boîtier, webcam USB branchée dessus, ESP32-S3 connecté en Wi-Fi au Pi 5 qui
-    fait point d’accès.'
-  - 'Matériel : Pi 5 + alimentation officielle 27 W + ventilateur actif ; Pi 4 Model B + alimentation 15 W ; deux
-    cartes microSD ; câble Ethernet.'
-  - 'Rôle du Pi 4 : repli à chaud (même image, même stack) et station d’audit pendant le pentest.'
+  - 'Option B du sujet : le PC portable est le serveur (point d’accès Wi-Fi, Docker Desktop, vision sur la webcam USB).'
+  - Les Raspberry Pi ne sont plus utilisés ; la solution reste portable sur Linux ou Raspberry Pi 5 (docker-compose.linux.yml).
+  - 'Secours : un deuxième PC de l’équipe préparé à l’identique (tâche p4) et la vidéo de démonstration si la webcam lâche.'
   - Faire valider par les coachs le remplacement de l’ESP8266 par l’ESP32-S3 et du DHT22 par le DHT11.
-  fini_quand: Rôles des deux Pi notés, changement de matériel validé, justification écrite.
+  fini_quand: Décision notée dans docs/architecture.md (v3), changement de matériel validé.
   fait: true
 - id: g3
   titre: Questions aux coachs
@@ -135,8 +133,8 @@ taches:
   - docs
   - bloquant
   detail:
-  - Partir des schémas du document d’architecture v2 (global, IoT, réseau, Docker, séquence, IA, sécurité, boîtier).
-  - 'Flèches avec protocole et port : MQTTS 8883 (boîtiers), 8884 (services, interne), HTTPS 443, WebSocket, MJPEG,
+  - Partir des schémas du document d’architecture v3 (global, IoT, réseau, PC serveur et Docker, séquence, IA, sécurité, boîtier).
+  - 'Flèches avec protocole et port : MQTTS 8883 (boîtier et vision), 8884 (services, interne), HTTPS 443, WebSocket, MJPEG,
     POST /api/v1/alerts.'
   - 'Export PNG/SVG dans docs/ : il servira au dossier, aux slides et à la vidéo.'
   fini_quand: Schéma exporté dans docs/architecture.png.
@@ -158,13 +156,13 @@ taches:
   - docs
   - bloquant
   detail:
-  - 'Topics : sentinel/<id>/telemetry, event, health, status (dernière volonté), cmd, config (conservé) ; sentinel/site/config
-    ; sentinel/brain/score.'
-  - 'Télémétrie : device_id, seq, boot_id, ts, temp_c, hum_pct, gas_mv, gas_ratio, gas_do, pir, pir_count, mode,
-    edge_score, replay.'
+  - 'Topics : sentinel/<id>/telemetry, event, health, status (dernière volonté), cmd, config (conservé) ; sentinel/cam-01/vision
+    ; sentinel/site/config ; sentinel/brain/score et alert.'
+  - 'Télémétrie : device_id, seq, boot_id, ts, temp_c, hum_pct, gas_mv, gas_ratio, gas_do, pir, pir_count, mode, edge_score,
+    replay.'
+  - 'Vision : personnes (suivi, zone, temps de présence, badge), masquée, faible luminosité, figée.'
   - 'Alerte : device_id, source, domain, type, severity, score, eta_min, ts, explanation, factors, details.'
-  - 'Endpoints : alerts (POST, GET, PATCH), telemetry, commands, config (GET/PUT), score, health, /ws, /video.'
-  - 'Base de départ : docs/contracts.md v2 du dépôt, à relire et valider ensemble.'
+  - 'Base de départ : docs/contracts.md v3 du dépôt, à relire et valider ensemble.'
   fini_quand: docs/contracts.md commité et annoncé au groupe.
   fait: false
 - id: g6
@@ -183,11 +181,11 @@ taches:
   - reseau
   - bloquant
   detail:
-  - 'Sous-réseau dédié (ex. 192.168.10.0/24 selon la plage des coachs) : Pi 5 en .1 (passerelle et serveur), Pi
-    4 en .2 (repli et audit), ESP32-S3 en .10 réservé par MAC, DHCP .100–.120.'
-  - 2,4 GHz WPA2-AES, canal 1, 6 ou 11 différent des voisins, phrase de passe de 20 caractères minimum (Lisa).
-  - 'Ports ouverts : 22 (admin), 443, 8883. Le 8884 reste interne à Docker.'
-  - 'Procédure de bascule : le Pi 4 reprend l’adresse .1 et le point d’accès.'
+  - 'Point d’accès mobile Windows : réseau 192.168.137.0/24 imposé, PC serveur en 192.168.137.1, ESP32-S3 et postes en DHCP.'
+  - 2,4 GHz obligatoire (ESP32-S3), WPA2, phrase de passe de 20 caractères minimum (Lisa), SSID sentinel-x-gN.
+  - 'Ports ouverts sur le PC, depuis le point d’accès seulement : 443, 8883, NTP ; 1883 avant TLS. Le 8884 reste interne à
+    Docker.'
+  - 'Plan B : routeur de table sur 192.168.137.0/24 avec le PC réservé en .1 (rien ne change pour l’ESP).'
   fini_quand: Tableau dans docs/reseau.md.
   fait: false
 - id: g7
@@ -224,13 +222,13 @@ taches:
   - orga
   - bloquant
   detail:
-  - Présenter architecture v2, plan IP, contrat d’interface, Option A, repli sur le Pi 4 et changement de matériel
-    (ESP32-S3, DHT11).
+  - Présenter architecture v3 (PC serveur), plan IP du point d’accès, contrat d’interface, deux IA (vision et Sentinel Brain)
+    et changement de matériel (ESP32-S3, DHT11).
   - Corriger dans la foulée, photo de la version validée.
   fini_quand: Validation obtenue.
   fait: false
 - id: p1
-  titre: Installer et préparer le Raspberry Pi 5 et le Raspberry Pi 4
+  titre: Préparer le PC serveur (Windows 11, Docker Desktop, vision)
   jour: Lundi
   creneau: Lundi 13h30 – 17h30
   duree: 1 h
@@ -245,17 +243,16 @@ taches:
   - infra
   - bloquant
   detail:
-  - 'Raspberry Pi Imager : Pi OS Lite 64 bits sur les deux cartes ; noms d’hôte sentinel-pi (Pi 5) et sentinel-pi4
-    (Pi 4) ; SSH par clé publique uniquement.'
-  - Premier démarrage en Ethernet, sudo apt update && sudo apt full-upgrade, Docker (get.docker.com) et plugin compose,
-    sur les deux Pi.
-  - 'Ventilateur actif sur le Pi 5 : vcgencmd measure_temp et vcgencmd get_throttled (doit renvoyer 0x0).'
-  - Cloner le dépôt sur les deux Pi. Michel exécute, Constantin accompagne.
-  fini_quand: SSH par clé sur les deux Pi depuis deux laptops, hello-world passe sur les deux, get_throttled = 0x0
-    sur le Pi 5.
+  - Choisir le PC le plus puissant de l’équipe (processeur récent, 16 Go de RAM si possible, webcam USB).
+  - 'powershell -ExecutionPolicy Bypass -File tools\setup-poste.ps1 -Role serveur : Docker Desktop (moteur WSL 2), .venv,
+    vision, modèle yolov8n.pt.'
+  - Désactiver la veille et reporter les mises à jour Windows jusqu’à vendredi ; Docker Desktop lancé au démarrage.
+  - Préparer de la même façon un deuxième PC de secours. Michel exécute, Constantin accompagne.
+  fini_quand: python tools\doctor.py --role serveur sans [KO] sur les deux PC, docker run hello-world passe, la webcam donne
+    une image.
   fait: false
 - id: c1
-  titre: Stack Docker minimale sur le Raspberry Pi
+  titre: Stack Docker minimale sur le PC serveur
   jour: Lundi
   creneau: Lundi 13h30 – 17h30
   duree: 1 h 30
@@ -269,11 +266,12 @@ taches:
   - infra
   - bloquant
   detail:
-  - 'Après l’installation des Pi : infra/.env depuis .env.example, comptes Mosquitto (esp-01, api, anomaly, monitor).'
-  - 'Lancer le socle (Mosquitto + PostgreSQL) avec la surcharge de lundi : MQTT 1883 authentifié, pas d’anonyme.'
-  - Vérifier que le même docker compose démarre aussi sur le Pi 4.
-  - TLS mardi avec les certificats de Lisa (MOSQUITTO_CONF=mosquitto.tls.conf).
-  fini_quand: mosquitto_pub/sub fonctionne avec identifiants depuis un laptop connecté au Wi-Fi du Pi.
+  - 'Après la préparation du PC : infra\.env depuis .env.example, comptes Mosquitto (esp-01, vision, api, anomaly, monitor).'
+  - 'Lancer le socle (Mosquitto + PostgreSQL) avec la surcharge docker-compose.dev.yml : MQTT 1883 authentifié, pas d’anonyme
+    (tools\demarrer.ps1 -SansVision).'
+  - Vérifier que le même docker compose démarre aussi sur le PC de secours.
+  - TLS avec les certificats de Lisa (MOSQUITTO_CONF=mosquitto.tls.conf).
+  fini_quand: mosquitto_pub/sub fonctionne avec identifiants depuis un autre poste connecté au point d’accès du PC.
   fait: false
 - id: c2
   titre: API squelette
@@ -290,10 +288,11 @@ taches:
   - api
   - bloquant
   detail:
-  - POST /api/v1/alerts avec validation stricte du schéma v2 (pydantic), GET /api/v1/health.
-  - Client MQTT abonné à sentinel/+/telemetry, event, health et status ; diffusion WebSocket vers le front.
-  - Contrôle de seq et boot_id à l’ingestion (trous et rejeu signalés).
-  - Tester avec le simulateur de Jeffrick.
+  - POST /api/v1/alerts avec validation stricte du contrat v3 (pydantic), GET /api/v1/health.
+  - Client MQTT abonné à sentinel/+/telemetry, event, health, status, vision et sentinel/brain/# ; diffusion WebSocket vers
+    le front.
+  - Insertion idempotente (ON CONFLICT sur device_id, boot_id, seq) dans le schéma fourni (infra/postgres/init/01-schema.sql).
+  - Tester avec le simulateur et la vidéo de démonstration de la vision.
   fini_quand: Une donnée simulée publiée sur MQTT arrive en WebSocket.
   fait: false
 - id: c3
@@ -329,15 +328,14 @@ taches:
   - ia
   - bloquant
   detail:
-  - 'tools/simulator.py (paho-mqtt) : télémétrie, événements et santé au format v2, toutes les 2 s, avec seq et
-    boot_id.'
-  - 'Scénarios --scenario : dérive lente de température, fuite de gaz, risque incendie (température + gaz), intrusion
-    (PIR), rejeu de messages, brouillage (RSSI en chute, déconnexions).'
-  - Débloque Constantin et sert de jeu de données synthétique étiqueté.
+  - 'tools/simulator.py (paho-mqtt) : télémétrie, événements et santé au format du contrat, toutes les 2 s, avec seq et boot_id.'
+  - 'Scénarios --scenario : dérive lente de température, fuite de gaz, risque incendie, intrusion (PIR), effraction, rejeu,
+    brouillage.'
+  - '--rx-log : journal de ce que le broker reçoit (entrée de Sentinel Brain) ; --csv : vue capteurs étiquetée.'
   fini_quand: Constantin reçoit les données simulées dans l’API.
-  fait: false
+  fait: true
 - id: j2
-  titre: Mesures YOLO sur le Pi 5 et le Pi 4
+  titre: Mesures YOLO sur le PC serveur
   jour: Lundi
   creneau: Lundi 13h30 – 17h30
   duree: 1 h 30
@@ -352,13 +350,10 @@ taches:
   - ia
   - bloquant
   detail:
-  - Momo montre ultralytics à Jeffrick (30 min), puis Momo repart sur l’ESP32-S3.
-  - 'Sur le Pi 5 puis le Pi 4 : capture 640×480, classe personne, PyTorch puis export NCNN, puis imgsz=320 ; ms
-    par image sur 200 images.'
-  - Tester model.track (suivi) pour le temps de présence.
-  - 'Tableau format / taille / ms / FPS / machine dans docs/preuves/latence-yolo.md : preuve d’optimisation pour
-    le jury.'
-  fini_quand: Meilleure configuration retenue pour chaque Pi, tableau commité.
+  - 'python ai\vision\tools\benchmark.py sur le PC serveur (et le PC de secours) : PyTorch 320 et 640 px, moyenne, p95, images/s.'
+  - 'Option --ncnn pour préparer le portage Raspberry Pi (format NCNN) : preuve d’optimisation pour le jury.'
+  - Tableau dans docs/preuves/latence-yolo.md, écrit automatiquement par le script.
+  fini_quand: Configuration retenue (format, taille) avec moins de 100 ms par image, tableau commité.
   fait: false
 - id: j3
   titre: Prototype de Sentinel Brain (4 couches)
@@ -374,13 +369,13 @@ taches:
   labels:
   - ia
   detail:
-  - 'Couche 1 : plausibilité, capteur figé, trous de seq. Couche 2 : EWMA, écart robuste (MAD), CUSUM.'
-  - 'Couche 3 : Isolation Forest sur fenêtres de 60 s (température lissée, pente, humidité, ratio gaz, corrélation,
-    PIR/min, RSSI).'
-  - 'Couche 4 : prévision de Holt et calcul d’eta_min.'
-  - 'Notebook ai/anomaly/notebooks : deviendra la section IA du dossier.'
+  - 'Paquet ai/anomaly/brain : couche 1 (qualité, rejeu), couche 2 (CUSUM décorrélé + vitesse de montée), couche 3 (Isolation
+    Forest), couche 4 (Holt, eta_min).'
+  - 'Calibration sur 24 h de régime normal, évaluation sur d’autres données : fuite détectée 1 min avant le seuil brut, critique
+    prévu ~3 min avant.'
+  - 'Notebook ai/anomaly/notebooks/01-prototype.ipynb : section IA du dossier.'
   fini_quand: Sur les scénarios simulés, le score monte et eta_min est calculé avant tout seuil brut.
-  fait: false
+  fait: true
 - id: m1
   titre: Câblage ESP32-S3 et test de chaque composant
   jour: Lundi
@@ -397,12 +392,12 @@ taches:
   - iot
   - bloquant
   detail:
-  - 'Michel câble selon docs/cablage.md et firmware/include/pins.h, Momo programme : PlatformIO (esp32-s3-devkitc-1,
-    port COM), blink sur la LED RGB.'
-  - DHT11 sur GPIO 4 (lecture toutes les 2 s), PIR sur GPIO 5 (cavalier H, sensibilité max, délai min), OLED sur
-    GPIO 8/9 si disponible.
-  - 'MQ-2 en 5 V : AO via pont 10k/10k vers GPIO 1, DO via pont 10k/15k vers GPIO 6 ; préchauffage immédiat ; vérifier
-    au multimètre que GPIO 1 reste sous 2,5 V.'
+  - 'Michel câble selon docs/cablage.md et firmware/include/pins.h, Momo programme : PlatformIO (esp32-s3-devkitc-1, port
+    COM), blink sur la LED RGB.'
+  - DHT11 sur GPIO 4 (lecture toutes les 2 s), PIR sur GPIO 5 (cavalier H, sensibilité max, délai min), OLED sur GPIO 8/9
+    si disponible.
+  - 'MQ-2 en 5 V : AO via pont 10k/10k vers GPIO 1, DO via pont 10k/15k vers GPIO 6 ; préchauffage immédiat ; vérifier au
+    multimètre que GPIO 1 reste sous 2,5 V.'
   - 'Effraction : feuille de cuivre sur GPIO 7 (tactile), relever la valeur au repos et main posée.'
   fini_quand: Chaque capteur donne une valeur cohérente au moniteur série ; mesures relevées dans docs/cablage.md.
   fait: false
@@ -420,8 +415,9 @@ taches:
   labels:
   - iot
   detail:
-  - Connexion au point d’accès du Pi 5, publication de la télémétrie v2 (avec seq et boot_id) sur 1883 avec identifiants.
-  - Identifiants dans include/secrets.h ignoré par Git, secrets.example.h versionné.
+  - Connexion au point d’accès du PC serveur (2,4 GHz), broker 192.168.137.1, publication de la télémétrie (seq et boot_id)
+    sur 1883 avec identifiants.
+  - Identifiants dans include/secrets.h ignoré par Git, secrets.example.h versionné (adresse et NTP du PC déjà renseignés).
   fini_quand: Constantin voit les vraies valeurs dans mosquitto_sub.
   fait: false
 - id: l1
@@ -439,10 +435,10 @@ taches:
   - cyber
   - bloquant
   detail:
-  - 'Script OpenSSL dans security/pki (sans les clés) : CA, certificat serveur ECDSA P-256 avec SAN 192.168.10.1,
-    192.168.10.2, sentinel-pi, sentinel-pi4, mosquitto.'
+  - 'Script OpenSSL dans security/pki (sans les clés) : CA, certificat serveur ECDSA P-256 avec SAN 192.168.137.1, 127.0.0.1,
+    localhost, sentinel-pc, mosquitto, host.docker.internal.'
   - Tester la chaîne avec mosquitto_sub --cafile depuis un PC avant d’impliquer l’ESP32-S3.
-  - Installer chrony sur le Pi 5 (et le Pi 4) comme source NTP locale.
+  - 'Heure : serveur NTP du PC (tools\serveur-pc.ps1 -Action Ntp), source de l’ESP32-S3.'
   fini_quand: Certificats générés, chaîne testée, NTP local actif.
   fait: false
 - id: l2
@@ -459,13 +455,14 @@ taches:
   labels:
   - cyber
   detail:
-  - 'Remplir docs/securite.md v2 : Wi-Fi, MQTT, API, SSH, Docker, boîtier, caméra, dépôt.'
-  - 'Scan Nmap de référence du Pi 5 (avant hardening) conservé ; outils d’audit prévus : Nmap, Wireshark, Metasploit.'
+  - 'Remplir docs/securite.md v3 : Wi-Fi, MQTT, API, PC serveur, Docker, boîtier, caméra, vie privée, dépôt.'
+  - 'Scan Nmap de référence du PC serveur depuis un autre poste du point d’accès (avant durcissement) ; outils d’audit prévus
+    : Nmap, Wireshark, Metasploit.'
   - Règles d’engagement du pentest notées, gitleaks vérifié sur le dépôt.
   fini_quand: docs/securite.md commité, scan de référence sauvegardé.
   fait: false
 - id: mi1
-  titre: Point d’accès Wi-Fi de table
+  titre: Point d’accès Wi-Fi du PC serveur
   jour: Lundi
   creneau: Lundi 13h30 – 17h30
   duree: 1 h
@@ -479,11 +476,12 @@ taches:
   - reseau
   - bloquant
   detail:
-  - 'Sur le Pi 5 : nmcli dev wifi hotspot ifname wlan0 (2,4 GHz, WPA2, canal choisi), connexion persistante (autoconnect).'
-  - Réservation DHCP de l’ESP32-S3 par adresse MAC, IP fixe du Pi 5 (.1).
-  - Préparer le même profil sur le Pi 4, désactivé (pour la bascule).
+  - 'PowerShell administrateur : tools\serveur-pc.ps1 (pare-feu, NTP, point d’accès 2,4 GHz WPA2, vérification).'
+  - Le PC doit être relié à un réseau (Wi-Fi de l’école ou Ethernet) pour activer le point d’accès ; sinon plan B routeur
+    (docs/reseau.md).
+  - Même SSID et même phrase de passe préparés sur le PC de secours.
   - Tester avec un téléphone, puis avec l’ESP32-S3 de Momo.
-  fini_quand: L’ESP obtient son IP réservée et pingue le serveur.
+  fini_quand: L’ESP obtient une adresse 192.168.137.x et joint le broker sur 192.168.137.1.
   fait: false
 - id: mi2
   titre: Mesures et esquisse du boîtier
@@ -499,12 +497,11 @@ taches:
   labels:
   - fablab
   detail:
-  - Pied à coulisse sur Pi 5 avec ventilateur, ESP32-S3, MQ-2, DHT11, PIR (dôme), plaque d’essai, OLED si disponible.
-  - 'Fusion 360 : deux compartiments séparés par une cloison (Pi 5 / capteurs), aérations séparées, DHT11 loin du
-    Pi et du MQ-2, dôme PIR et LED d’état en façade.'
-  - 'Couvercle : emplacement de la feuille de cuivre tactile (effraction). Une seule alimentation : le Pi 5 alimente
-    l’ESP32-S3 par USB.'
-  - Accès aux ports USB (webcam, ESP32-S3), USB-C et Ethernet ; entretoises M2.5 ; réserver l’impression mardi midi.
+  - Pied à coulisse sur ESP32-S3, MQ-2, DHT11, PIR (dôme), plaque d’essai, OLED si disponible.
+  - 'Fusion 360 : boîtier compact (plus de Raspberry Pi), aération pour le MQ-2, DHT11 loin du MQ-2, dôme PIR et LED d’état
+    en façade.'
+  - 'Couvercle : emplacement de la feuille de cuivre tactile (effraction). Passage du câble USB-C d’alimentation.'
+  - 'Option : support imprimé pour orienter la webcam du PC vers la zone ; réserver l’impression mardi midi.'
   fini_quand: Esquisse cotée dans Fusion 360, créneau réservé.
   fait: false
 - id: g9
@@ -540,10 +537,11 @@ taches:
   - cyber
   - bloquant
   detail:
-  - 'MOSQUITTO_CONF=mosquitto.tls.conf : 8883 publié pour les boîtiers, 8884 interne pour les services ; MQTT_PORT=8884
-    dans .env.'
-  - ACL v2 (infra/mosquitto/aclfile), allow_anonymous false, journal fichier partagé avec Sentinel Brain.
-  - Fermer 1883 dès que l’ESP32-S3 publie en 8883 (retirer la surcharge de lundi).
+  - 'MOSQUITTO_CONF=mosquitto.tls.conf : 8883 publié (boîtier, vision), 8884 interne pour les services ; MQTT_PORT=8884 dans
+    .env.'
+  - ACL v3 (infra/mosquitto/aclfile, compte vision ajouté), allow_anonymous false, journal fichier partagé avec Sentinel Brain.
+  - 'Fermer 1883 dès que l’ESP32-S3 publie en 8883 : retirer la surcharge dev et la règle de pare-feu 1883 (tools\serveur-pc.ps1
+    -Action PareFeu).'
   fini_quand: mosquitto_sub en 8883 avec CA fonctionne, un client anonyme est refusé.
   fait: false
 - id: c5
@@ -562,8 +560,11 @@ taches:
   - api
   - bloquant
   detail:
-  - 'Schéma BDD (Jeffrick) : telemetry, events, health, alerts (statut, facteurs), commands, config_versions, audit_log.'
-  - Écriture par l’API, GET historique paginé, enregistrement continu pour l’entraînement.
+  - 'Schéma livré par Jeffrick : infra/postgres/init/01-schema.sql (telemetry, events, health, device_status, vision_events,
+    brain_scores, alerts avec cycle de vie, commands, config_versions, audit_log, vues).'
+  - Écriture par l’API (insertion idempotente, regroupement des alertes), GET historique paginé, enregistrement continu pour
+    l’entraînement.
+  - 'Export d’entraînement : vue v_training_telemetry (infra/postgres/init/README.md).'
   fini_quand: Les données de la journée sont en BDD et relisibles.
   fait: false
 - id: c6
@@ -587,7 +588,7 @@ taches:
   fini_quand: Une commande depuis le dashboard fait sonner le buzzer.
   fait: false
 - id: p2
-  titre: Budget de ressources du Pi
+  titre: Budget de ressources du PC serveur
   jour: Mardi
   creneau: Mardi
   duree: 45 min
@@ -601,11 +602,11 @@ taches:
   labels:
   - infra
   detail:
-  - Mesurer RAM et CPU avec toute la stack et YOLO (docker stats, htop) sur le Pi 5, puis sur le Pi 4.
-  - Limites du compose respectées (Brain 512 Mo, vision 1,5 Go). PostgreSQL avec shared_buffers réduit.
-  - Dashboard compilé sur un laptop et servi en fichiers statiques par nginx.
-  - 'Surveiller la température : au-delà de 80 °C, le Pi se bride.'
-  fini_quand: Stack complète plus YOLO sous 3 Go de RAM, pas de bridage thermique après 30 min.
+  - Mesurer CPU et RAM avec toute la stack et la vision (docker stats, Gestionnaire des tâches) pendant 30 min.
+  - Images/s de la vision (/vision/health) et latence YOLO ; ajuster imgsz ou le rythme si le processeur sature.
+  - Dashboard compilé (npm run build) et servi en fichiers statiques par nginx.
+  - Vérifier que le PC ne se met pas en veille et reste branché sur secteur.
+  fini_quand: Stack complète plus vision stables 30 min, processeur sous 70 %, YOLO sous 100 ms par image.
   fait: false
 - id: mo1
   titre: 'Firmware v1 : tâches, garde locale et tampon'
@@ -623,13 +624,12 @@ taches:
   - bloquant
   detail:
   - 'Tâches FreeRTOS : capteurs (cœur 1), garde locale (cœur 1), réseau (cœur 0), santé (cœur 0).'
-  - 'Garde locale : EWMA, écart robuste et pente par capteur, edge_score, alarme réflexe sans serveur, échantillonnage
-    500 ms en suspicion.'
-  - Tampon circulaire en PSRAM rejoué avec les horodatages d’origine (replay=true) ; message de dernière volonté
-    ; santé toutes les 30 s.
+  - 'Garde locale : EWMA, écart robuste et pente par capteur, edge_score, alarme réflexe sans serveur, échantillonnage 500
+    ms en suspicion.'
+  - Tampon circulaire en PSRAM rejoué avec les horodatages d’origine (replay=true) ; message de dernière volonté ; santé toutes
+    les 30 s.
   - Modes learning / armed / maintenance, voyant RGB, configuration sentinel/esp-01/config enregistrée en NVS.
-  fini_quand: 'Wi-Fi coupé 5 min : voyant violet, alarme locale fonctionnelle, aucune mesure perdue au retour du
-    réseau.'
+  fini_quand: 'Wi-Fi coupé 5 min : voyant violet, alarme locale fonctionnelle, aucune mesure perdue au retour du réseau.'
   fait: false
 - id: mo2
   titre: Passage du firmware en TLS
@@ -647,7 +647,7 @@ taches:
   - iot
   - bloquant
   detail:
-  - WiFiClientSecure avec setCACert (CA dans certs.h), heure par le NTP du Pi, port 8883.
+  - WiFiClientSecure avec setCACert (CA dans certs.h), heure par le NTP du PC (192.168.137.1), port 8883.
   - Valider la reconnexion TLS après coupure Wi-Fi et redémarrage du broker.
   - Préparer l’emplacement du certificat client pour le TLS mutuel (tâche li7).
   fini_quand: Télémétrie reçue en 8883, 1883 fermé.
@@ -667,12 +667,14 @@ taches:
   - ia
   - bloquant
   detail:
-  - YOLO NCNN 320 px, classe personne, model.track pour compter les personnes et mesurer leur temps de présence.
-  - Zone interdite lue dans le profil de site, rôdeur au-delà de loitering_s, confirmation sur plusieurs images.
-  - Caméra masquée (image uniforme) et faible luminosité détectées ; FPS et latence en surimpression ; flux MJPEG
-    sur /video.
-  - POST /api/v1/alerts au changement d’état uniquement, avec délai minimal.
-  fini_quand: 'Une personne entre dans la zone : alerte au dashboard ; caméra masquée : alerte sabotage.'
+  - 'Code prêt dans ai/vision : mouvement (MOG2), YOLOv8n + ByteTrack, zone, temps de présence, badges ArUco, caméra masquée
+    / sombre / figée, flux /video.'
+  - 'Sur le PC serveur, hors Docker (webcam) : lancé par tools\demarrer.ps1 ; publication sentinel/cam-01/vision.'
+  - Régler la zone sur l’image réelle (/video), imprimer les badges des agents (ai\vision\tools\badges.py) et les déclarer
+    dans le profil de site.
+  - Vidéo de démonstration (ai\vision\tools\demo_video.py) pour les tests et le plan B.
+  fini_quand: 'Une personne entre dans la zone : alerte au dashboard ; caméra masquée : alerte sabotage ; agent badgé : présence
+    autorisée.'
   fait: false
 - id: je2
   titre: Collecte et provocation d’anomalies réelles
@@ -689,12 +691,12 @@ taches:
   - ia
   detail:
   - Régime normal enregistré plusieurs heures (DHT11 lissé, ratio gaz).
-  - 'Scénarios horodatés : sèche-cheveux à distance du DHT11 (rester sous 50 °C), gel hydroalcoolique près du MQ-2,
-    passage devant le PIR, main sur le couvercle. Pas de flamme.'
+  - 'Scénarios horodatés : sèche-cheveux à distance du DHT11 (rester sous 50 °C), gel hydroalcoolique près du MQ-2, passage
+    devant le PIR, main sur le couvercle. Pas de flamme.'
   fini_quand: Jeu de données réel étiqueté exporté en CSV.
   fait: false
 - id: li1
-  titre: Script de hardening
+  titre: Durcissement du PC serveur
   jour: Mardi
   creneau: Mardi
   duree: 2 h
@@ -707,13 +709,13 @@ taches:
   labels:
   - cyber
   detail:
-  - 'Sur le Pi : UFW deny par défaut, n’autoriser que 22 (depuis le sous-réseau admin), 443 et 8883.'
-  - 'sshd : PasswordAuthentication no, PermitRootLogin no, clés ed25519 (déjà en place grâce à l’installation).'
-  - 'Compose : utilisateurs non root, no-new-privileges, pas de socket Docker monté.'
-  - 'Attention : Docker contourne UFW pour les ports publiés. Ne publier que les ports nécessaires et le vérifier
-    au Nmap.'
+  - 'Pare-feu Windows : seules les règles de tools\serveur-pc.ps1 (443, 8883, NTP depuis 192.168.137.0/24) ; supprimer 1883
+    après le passage en TLS.'
+  - 'Docker Desktop : démon non exposé sur tcp://localhost:2375, conteneurs non root, no-new-privileges, pas de socket Docker
+    monté.'
+  - 'Windows : découverte réseau et partage désactivés sur le réseau du point d’accès, session verrouillée, Defender actif.'
   - Appliquer en fin de journée seulement, après accord de Constantin.
-  fini_quand: Script testé, Nmap après hardening sauvegardé.
+  fini_quand: Configuration vérifiée (serveur-pc.ps1 -Action Verifier), Nmap après durcissement sauvegardé.
   fait: false
 - id: li2
   titre: Sécurité de l’API
@@ -750,7 +752,7 @@ taches:
   - bloquant
   detail:
   - Finaliser dans Fusion 360 (jeu 0,3 à 0,5 mm), exporter en STL, lancer l’impression au créneau réservé.
-  - 'Boîtier plus grand avec le Pi 5 : vérifier le temps d’impression et découper en deux pièces si besoin.'
+  - 'Boîtier compact (ESP32-S3 et capteurs seulement) : impression plus courte, une seule pièce si possible.'
   - Faire relire les cotes par Momo avant l’impression.
   fini_quand: Impression lancée mardi midi au plus tard.
   fait: false
@@ -769,14 +771,14 @@ taches:
   labels:
   - video
   detail:
-  - 'Constantin : storyboard 9:16 calé sur la structure imposée (hook 0–10 s, boîtier 10–30 s, incrustation 30–50
-    s, outro 50–60 s) et liste des plans.'
+  - 'Constantin : storyboard 9:16 calé sur la structure imposée (hook 0–10 s, boîtier 10–30 s, incrustation 30–50 s, outro
+    50–60 s) et liste des plans.'
   - 'Michel : logo AetherCorp vectoriel (SVG), numéro de série, consignes de sécurité pour la gravure.'
   - Réserver la salle fond vert et le laser.
   fini_quand: Storyboard et fichiers de gravure dans docs/.
   fait: false
 - id: p3
-  titre: 'Décision go / no-go : Pi 5 ou bascule sur le Pi 4'
+  titre: 'Décision go / no-go : PC serveur ou bascule sur le PC de secours'
   jour: Mardi
   creneau: Mardi
   duree: 15 min
@@ -789,8 +791,9 @@ taches:
   - orga
   - bloquant
   detail:
-  - 'Critères : latence YOLO sous 100 ms sur le Pi 5, stack complète sous 3 Go, pas de bridage, télémétrie TLS reçue.'
-  - 'Si un critère échoue sans solution : bascule sur le Pi 4 ou réduction de la vision (moins d’images par seconde).'
+  - 'Critères : télémétrie TLS reçue au dashboard, YOLO sous 100 ms à 320 px, vision publiée au broker, stack démarrée par
+    tools\demarrer.ps1.'
+  - 'Si un critère échoue sans solution : bascule sur le PC de secours, ou vision sur la vidéo de démonstration.'
   - Décision notée avec ses mesures pour le jury.
   fini_quand: Décision prise et documentée mardi 18h.
   fait: false
@@ -808,8 +811,8 @@ taches:
   - orga
   - bloquant
   detail:
-  - 'Vraie valeur de l’ESP visible sur le dashboard ? Si non : on coupe des fonctionnalités et tout le monde aide
-    à l’intégration mercredi matin.'
+  - 'Vraie valeur de l’ESP visible sur le dashboard ? Si non : on coupe des fonctionnalités et tout le monde aide à l’intégration
+    mercredi matin.'
   - Push Git de tout le monde.
   fini_quand: Flux de bout en bout démontré.
   fait: false
@@ -828,8 +831,9 @@ taches:
   - bloquant
   detail:
   - ESP32-S3 en TLS → Mosquitto → API → BDD → WebSocket → dashboard, avec vision et Sentinel Brain branchés.
-  - 'Flux de configuration : page Réglages → API → MQTT conservé → boîtier et Brain appliquent sans redémarrage.'
-  - Tests de démo en conditions réelles, bugs dans le Kanban ; /health avec la santé du Pi et des boîtiers.
+  - 'Flux de configuration : page Réglages → API → MQTT conservé → boîtier, Brain et vision appliquent sans redémarrage.'
+  - Tests de démo en conditions réelles, bugs dans le Kanban ; /health avec la santé du PC, des conteneurs, des boîtiers et
+    de la vision.
   fini_quand: Scénario de démo complet joué sans intervention.
   fait: false
 - id: je3
@@ -847,11 +851,12 @@ taches:
   - ia
   - bloquant
   detail:
-  - 'Service abonné à MQTT (8884) : 4 couches, fusion en scores environnement / physique / cyber et Sentinel Score.'
-  - Règles de corrélation (intrusion confirmée, sabotage, risque incendie, fuite de gaz, capteur défaillant), explications
-    et facteurs, délai entre notifications.
-  - Apprentissage 10 min au démarrage, réentraînement toutes les 30 min sur fenêtres sans incident ; score publié
-    sur sentinel/brain/score.
+  - 'Service prêt (ai/anomaly/app/main.py) dans le conteneur anomaly (profil ai) : abonné à MQTT 8884, 4 couches, fusion avec
+    la vision, Sentinel Score.'
+  - 'Règles : intrusion confirmée (vision + PIR), rôdeur, présence autorisée / à vérifier (badges, horaires), sabotage, incendie,
+    fuite, dérive, capteur défaillant.'
+  - Alertes vers POST /api/v1/alerts (file d’attente si l’API est absente) et sentinel/brain/alert ; profil rechargé à chaud.
+  - 'Reste : valider sur le vrai boîtier et la vraie webcam, recalibrer avec les données de je2.'
   fini_quand: Sur un scénario provoqué, l’incident arrive expliqué avec une prévision avant le seuil brut.
   fait: false
 - id: mo3
@@ -869,9 +874,9 @@ taches:
   labels:
   - iot
   detail:
-  - Monter le Pi 5 et l’ESP32-S3 dans le boîtier, feuille de cuivre dans le couvercle, alimentation unique, aérations
-    dégagées.
-  - 'Laisser tourner une heure boîtier fermé : reconnexions, température du Pi, faux positifs d’effraction.'
+  - Monter l’ESP32-S3 et les capteurs dans le boîtier, feuille de cuivre dans le couvercle, alimentation USB-C, aération dégagée.
+  - 'Laisser tourner une heure boîtier fermé : reconnexions au point d’accès du PC, faux positifs d’effraction, webcam orientée
+    vers la zone.'
   fini_quand: Une heure sans perte de connexion.
   fait: false
 - id: g11
@@ -888,8 +893,8 @@ taches:
   labels:
   - video
   detail:
-  - 'Enregistrer avec OBS : dashboard et jauge Sentinel Score en action, YOLO qui suit un intrus, explication d’un
-    incident, logs Docker.'
+  - 'Enregistrer avec OBS : dashboard et jauge Sentinel Score en action, YOLO qui suit un intrus, explication d’un incident,
+    logs Docker.'
   - À faire avant midi pour l’incrustation.
   fini_quand: Clips dans le dossier partagé.
   fait: false
@@ -945,9 +950,9 @@ taches:
   labels:
   - cyber
   detail:
-  - Wireshark 1883 clair contre 8883 chiffré, client sans certificat refusé, Nmap avant et après hardening.
-  - Installer Metasploit sur la station d’audit (Pi 4 ou laptop) et préparer la checklist d’attaque (modules à essayer)
-    et le modèle de rapport.
+  - Wireshark 1883 clair contre 8883 chiffré, client sans certificat refusé, Nmap avant et après durcissement.
+  - Metasploit en conteneur sur un poste de l’équipe (docker run --rm -it metasploitframework/metasploit-framework) ; checklist
+    d’attaque et modèle de rapport.
   fini_quand: Captures dans docs/preuves/, modèle de rapport prêt.
   fait: false
 - id: mi5
@@ -1003,9 +1008,9 @@ taches:
   - ia
   - cyber
   detail:
-  - 'Lecture du journal Mosquitto partagé : rafales d’accès refusés, clients inconnus.'
-  - Rejeu (seq / boot_id), brouillage présumé (chute de RSSI puis déconnexions), rafales 401/429 de l’API (compteurs
-    de /health).
+  - 'Fait : rejeu (seq / boot_id) des boîtiers et de la caméra, horodatage falsifié, brouillage (chute de RSSI puis déconnexion),
+    rafales d’accès MQTT refusés lues dans le journal de Mosquitto (avec l’adresse IP).'
+  - 'Reste : rafales 401/429 de l’API (compteurs de /health) avec Lisa et Constantin.'
   - Score cyber et incidents « attaque cyber » expliqués.
   fini_quand: Une attaque de test (connexion refusée en boucle, rejeu) produit un incident cyber au dashboard.
   fait: false
@@ -1026,13 +1031,12 @@ taches:
   - api
   detail:
   - GET/PUT /api/v1/config à partir de config/site.example.yml, versionné dans config_versions.
-  - Publication conservée sur sentinel/<id>/config et sentinel/site/config ; application à chaud par le boîtier
-    et Brain.
+  - Publication conservée sur sentinel/<id>/config et sentinel/site/config ; application à chaud par le boîtier et Brain.
   - 'Page Réglages : sensibilités, seuils, modes et horaires, zone de la caméra.'
   fini_quand: Une sensibilité modifiée dans la page Réglages change le comportement sans redémarrage.
   fait: false
 - id: p4
-  titre: Répétition de bascule sur le Pi 4
+  titre: Répétition de bascule sur le PC de secours
   jour: Mercredi
   creneau: Mercredi après-midi et soir
   duree: 45 min
@@ -1047,9 +1051,8 @@ taches:
   - infra
   - reseau
   detail:
-  - 'Suivre la procédure de docs/reseau.md : le Pi 4 reprend 192.168.10.1 et le point d’accès.'
-  - Copier .env, passwd et certificats, docker compose up -d, vérifier la reconnexion de l’ESP32-S3 et le vidage
-    du tampon.
+  - 'Suivre la procédure de docs/reseau.md : le PC de secours reprend le point d’accès (même SSID) et donc 192.168.137.1.'
+  - Copier .env, passwd et certificats, tools\demarrer.ps1, vérifier la reconnexion de l’ESP32-S3 et le vidage du tampon.
   - Chronométrer.
   fini_quand: Bascule réalisée en moins de 10 minutes, sans perte de mesure.
   fait: false
@@ -1088,13 +1091,12 @@ taches:
   - cyber
   - bloquant
   detail:
-  - 'Attaque des autres tables dans le cadre fixé, depuis le Pi 4 comme station d’audit : reconnaissance Nmap, inspection
-    Wireshark, et au moins une tentative documentée avec Metasploit (ex. module auxiliaire scanner/mqtt ou scanner
-    de ports, ou vérification d’un service exposé).'
+  - 'Attaque des autres tables dans le cadre fixé, depuis un poste de l’équipe : reconnaissance Nmap, inspection Wireshark,
+    et au moins une tentative documentée avec Metasploit (ex. auxiliary/scanner/mqtt/connect ou scanner de ports).'
   - MQTT anonyme et API sans authentification ; DoS applicatif si autorisé par les coachs.
   - 'Surveillance de notre serveur : les attaques subies doivent apparaître en incidents cyber dans le dashboard.'
-  - 'Rapport : outils utilisés (Nmap, Wireshark, Metasploit), vulnérabilités, preuves, sévérités, recommandations,
-    attaques subies et résistance.'
+  - 'Rapport : outils utilisés (Nmap, Wireshark, Metasploit), vulnérabilités, preuves, sévérités, recommandations, attaques
+    subies et résistance.'
   fini_quand: Rapport intégré au dossier.
   fait: false
 - id: je4
@@ -1113,11 +1115,12 @@ taches:
   - docs
   - bloquant
   detail:
-  - 'PPTX calé sur le chrono : équipe et Option A (1 min), vidéo (1 min), démo (3 min), pitch et Q&A (5 min).'
-  - 'Points différenciants : autonomie à trois niveaux, Sentinel Brain (CUSUM, Isolation Forest, Holt), score expliqué,
-    effraction tactile, caméra qui se surveille, profil de site, repli Pi 4.'
-  - 'Réponses préparées : pourquoi ces méthodes, preuve du TLS mutuel, optimisation YOLO (NCNN), comportement si
-    le Wi-Fi tombe.'
+  - 'PPTX calé sur le chrono : équipe et Option B (1 min), vidéo (1 min), démo (3 min), pitch et Q&A (5 min).'
+  - 'Points différenciants : autonomie à trois niveaux, deux IA (vision qui voit, Brain qui décide), badges sans biométrie,
+    score expliqué, effraction tactile, caméra qui se surveille, profil de site, démarrage en une commande, portabilité Raspberry
+    Pi.'
+  - 'Réponses préparées : pourquoi ces méthodes, preuve du TLS mutuel, mesures YOLO, comportement si le Wi-Fi ou la webcam
+    tombe.'
   fini_quand: Workshop2026-M1-G<n>-Pres.pptx prêt, répété une fois.
   fait: false
 - id: li6
@@ -1134,8 +1137,8 @@ taches:
   - docs
   - bloquant
   detail:
-  - 'Chacun fournit sa section : réseau (Michel), câblage (Momo), sécurité et audit (Lisa), IA (Jeffrick), architecture
-    (Constantin). Poster A3 en annexe (Momo).'
+  - 'Chacun fournit sa section : réseau (Michel), câblage (Momo), sécurité et audit (Lisa), IA (Jeffrick), architecture (Constantin).
+    Poster A3 en annexe (Momo).'
   - README exhaustif, gitleaks passé, zip du dépôt. Tous les fichiers nommés selon la consigne.
   fini_quand: Dossier, PPTX, vidéo et zip déposés avant l’échéance.
   fait: false
@@ -1153,8 +1156,8 @@ taches:
   - orga
   - bloquant
   detail:
-  - Prototype déposé au myDiL, boîtier allumé 10 minutes avant le passage (préchauffage du MQ-2, apprentissage de
-    Brain, conteneurs).
-  - Pi 4 prêt en repli, simulateur prêt en secours si l’ESP32-S3 flanche.
+  - Prototype déposé au myDiL, PC et boîtier allumés 10 minutes avant le passage (préchauffage du MQ-2, apprentissage de Brain,
+    conteneurs, vision).
+  - PC de secours prêt, simulateur et vidéo de démonstration prêts si l’ESP32-S3 ou la webcam flanche.
   fini_quand: Passage de 10 minutes tenu.
   fait: false

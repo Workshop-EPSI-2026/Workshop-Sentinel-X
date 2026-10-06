@@ -8,7 +8,8 @@
 
     powershell -ExecutionPolicy Bypass -File tools\setup-poste.ps1 -Role ia
 
-  Roles : commun, ia (Jeffrick), iot (Momo, Michel), cyber (Lisa), integration (Constantin), fablab (Michel).
+  Roles : commun, ia (Jeffrick), iot (Momo, Michel), cyber (Lisa), integration (Constantin), fablab (Michel),
+         serveur (le PC qui fait tourner Sentinel-X le jour de la demo : Docker + vision + modele YOLO).
   Le script peut etre relance sans risque : ce qui est deja installe est conserve.
 
   Etapes :
@@ -16,12 +17,12 @@
     2. Node.js                    version de .nvmrc, via nvm
     3. Extensions VS Code         celles de .vscode/extensions.json
     4. Git                        autocrlf=false, branche main, identite
-    5. Cle SSH                    ed25519 pour les Raspberry Pi
+    5. Cle SSH                    ed25519 pour GitHub
     6. Python                     .venv avec Python de .python-version et versions exactes (requirements-dev.txt)
     7. Controle                   tools\doctor.py
 #>
 param(
-  [ValidateSet('commun', 'ia', 'iot', 'cyber', 'integration', 'fablab')]
+  [ValidateSet('commun', 'ia', 'iot', 'cyber', 'integration', 'fablab', 'serveur')]
   [string]$Role = 'commun',
   [switch]$SkipSoftware
 )
@@ -75,7 +76,7 @@ if (-not $SkipSoftware) {
   foreach ($k in $common.Keys) { Install-Package $k $common[$k] }
   switch ($Role) {
     'cyber'       { Install-Package 'Insecure.Nmap' 'Nmap'; Install-Package 'WiresharkFoundation.Wireshark' 'Wireshark' }
-    'fablab'      { Install-Package 'RaspberryPiFoundation.RaspberryPiImager' 'Raspberry Pi Imager' }
+    'fablab'      { Info "Fusion 360 : licence etudiante sur autodesk.com (pas d'installation automatique)" }
     'integration' { Install-Package 'OBSProject.OBSStudio' 'OBS Studio' }
   }
   Update-SessionPath
@@ -135,7 +136,7 @@ if (Test-Path "$key.pub") {
 } else {
   New-Item -ItemType Directory -Force -Path (Join-Path $HOME '.ssh') | Out-Null
   ssh-keygen -t ed25519 -C "$env:USERNAME@sentinel" -f $key
-  Info "cle publique a donner a Michel pour les Raspberry Pi :"
+  Info "cle publique a ajouter dans GitHub (Settings > SSH and GPG keys) :"
   Get-Content "$key.pub"
 }
 
@@ -150,10 +151,12 @@ $py = "$Root\.venv\Scripts\python.exe"
 & $py -m pip install --upgrade pip --quiet
 & $py -m pip install -r requirements-dev.txt --quiet
 if ($LASTEXITCODE -ne 0) { throw "Installation des dependances Python echouee." }
-if ($Role -eq 'ia') {
-  Info "role ia : PyTorch CPU et dependances de la vision"
+if ($Role -in 'ia', 'serveur') {
+  Info "role $Role : PyTorch CPU et dependances de la vision"
   & $py -m pip install -r ai\vision\torch-cpu.txt --index-url https://download.pytorch.org/whl/cpu --quiet
   & $py -m pip install -r ai\vision\requirements.txt --quiet
+  Info "modele YOLOv8n (6 Mo) dans ai\vision\models : a faire avec Internet, la demo s'en passe ensuite"
+  & $py -c "from ultralytics import YOLO; YOLO(r'ai\vision\models\yolov8n.pt')"
 }
 Info "dependances installees"
 

@@ -1,38 +1,56 @@
 # Réseau de table — Michel et Lisa
 
-## Wi-Fi (point d'accès porté par le Raspberry Pi 5, `nmcli`)
+Option B retenue : **le PC portable est le serveur**. Il porte le Wi-Fi de table (point d'accès mobile Windows),
+Docker Desktop (broker, base, API, dashboard, Sentinel Brain) et la vision sur la webcam. Préparation en une commande
+(PowerShell administrateur) : `tools\serveur-pc.ps1` — pare-feu, NTP, point d'accès, vérification.
+
+## Wi-Fi (point d'accès mobile Windows)
 
 | Paramètre | Valeur |
 | --- | --- |
 | SSID | `sentinel-x-gN` (N = numéro de groupe) |
-| Bande / canal | 2,4 GHz, canal 1, 6 ou 11 (le moins chargé) |
-| Sécurité | WPA2-AES, phrase de passe de 20 caractères minimum (hors dépôt) |
-| Internet | Ethernet du Pi 5, pour les installations uniquement |
+| Bande | **2,4 GHz obligatoire** (l'ESP32-S3 ne voit pas le 5 GHz) |
+| Sécurité | WPA2, phrase de passe de 20 caractères minimum (hors dépôt) |
+| Source | Le PC doit être relié à un réseau (Wi-Fi de l'école ou Ethernet) pour activer le point d'accès ; Sentinel-X n'utilise pas Internet |
+| Clients | 8 au maximum (limite Windows) : largement suffisant |
 
-## Plan d'adressage (à confirmer selon la plage des coachs)
+## Plan d'adressage
+
+Windows fixe lui-même le réseau du point d'accès : **192.168.137.0/24**, le PC en **192.168.137.1**.
 
 | Équipement | Nom | Adresse | Attribution |
 | --- | --- | --- | --- |
-| Raspberry Pi 5 (passerelle, serveur) | `sentinel-pi` | 192.168.10.1 | Fixe |
-| Raspberry Pi 4 (repli, station d'audit) | `sentinel-pi4` | 192.168.10.2 | Fixe |
-| ESP32-S3 | `esp-01` | 192.168.10.10 | Réservée, MAC : `__:__:__:__:__:__` |
-| Postes de l'équipe | — | 192.168.10.100 à .120 | DHCP |
+| PC serveur | `sentinel-pc` | 192.168.137.1 | Fixe (point d'accès Windows) |
+| ESP32-S3 | `esp-01` | 192.168.137.x | DHCP du point d'accès ; l'ESP n'a besoin que de l'adresse du serveur |
+| Postes de l'équipe (tests, pentest) | — | 192.168.137.x | DHCP |
 
-## Ports ouverts sur le serveur
+## Ports ouverts sur le PC
 
 | Port | Service | Depuis |
 | --- | --- | --- |
-| 22 | SSH (clé ed25519 uniquement) | Sous-réseau admin |
-| 443 | HTTPS / WSS (nginx) | Réseau de table |
-| 8883 | MQTTS (boîtiers) | Réseau de table |
-| *tout le reste* | refusé (UFW) | — |
+| 443 | HTTPS / WSS (nginx) | Réseau du point d'accès uniquement |
+| 8883 | MQTTS (boîtier) | Réseau du point d'accès uniquement |
+| 123/UDP | NTP (heure de l'ESP) | Réseau du point d'accès uniquement |
+| 1883 | MQTT en clair, **avant TLS seulement** (`serveur-pc.ps1 -Action PareFeu -Dev`) | Réseau du point d'accès |
+| *tout le reste* | refusé (pare-feu Windows) | — |
 
-Le port 8884 (MQTT des services) existe uniquement à l'intérieur de Docker et n'est jamais publié.
-Docker contourne UFW pour les ports publiés : seuls 443 et 8883 sont publiés, et la CI le vérifie.
+Le port 8884 (MQTT des services) existe uniquement dans Docker et n'est jamais publié. Le flux vidéo de la vision
+(8001) n'écoute que sur 127.0.0.1 : on le voit depuis le réseau seulement à travers nginx, en HTTPS (`/video`).
+La CI refuse tout port publié autre que 443 et 8883.
 
-## Bascule sur le Pi 4 (à répéter mercredi, objectif < 10 min)
+## Plan B : routeur de table
 
-1. Éteindre le point d'accès du Pi 5 (ou le Pi 5).
-2. Sur le Pi 4 : activer le profil `nmcli` du point d'accès avec l'adresse 192.168.10.1.
-3. Copier `infra/.env`, `infra/mosquitto/passwd`, `security/certs/` (clé USB), puis `docker compose up -d`.
-4. Vérifier que l'ESP32-S3 se reconnecte seul et que le tampon se vide.
+Si le point d'accès Windows refuse de démarrer (carte Wi-Fi incompatible, pas de réseau source) : un petit routeur
+Wi-Fi, réglé ainsi pour que **rien ne change côté ESP** :
+
+1. Réseau local du routeur en 192.168.137.0/24, routeur en 192.168.137.254.
+2. Réservation DHCP du PC (son adresse MAC) en **192.168.137.1**.
+3. Même SSID et même phrase de passe que le point d'accès.
+
+## Bascule sur le PC de secours (à répéter mercredi, objectif < 10 min)
+
+1. Sur le PC de secours : dépôt à jour, `tools\setup-poste.ps1 -Role serveur` déjà fait la veille.
+2. Copier (clé USB) `infra\.env`, `infra\mosquitto\passwd`, `security\certs\`.
+3. `tools\serveur-pc.ps1` (administrateur) avec le même SSID et la même phrase de passe, puis éteindre le point
+   d'accès du premier PC.
+4. `tools\demarrer.ps1` ; vérifier que l'ESP32-S3 se reconnecte seul et que son tampon se vide (mesures `replay`).

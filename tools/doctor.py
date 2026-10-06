@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """
-Sentinel-X — contrôle de l'environnement d'un poste ou d'un Raspberry Pi.
+Sentinel-X — contrôle de l'environnement d'un poste, du PC serveur ou d'un serveur Linux / Raspberry Pi.
 
-    python tools/doctor.py                 # poste, rôle commun
-    python tools/doctor.py --role ia       # + contrôles du rôle (ia, iot, cyber, integration, fablab)
-    python3 tools/doctor.py --pi           # sur un Raspberry Pi
+    python tools/doctor.py                     # poste, rôle commun
+    python tools/doctor.py --role ia           # + contrôles du rôle (ia, iot, cyber, integration, fablab)
+    python tools/doctor.py --role serveur      # PC serveur Windows : Docker, vision, webcam, pare-feu, point d'accès
+    python3 tools/doctor.py --linux            # serveur Linux ou Raspberry Pi (portage)
 
 [OK] conforme · [!!] à surveiller (n'empêche pas de travailler) · [KO] à corriger.
 Code de sortie 1 s'il reste au moins un [KO] : utilisable dans un script.
@@ -189,7 +190,7 @@ def check_ssh_key() -> None:
 
 
 def check_role(role: str) -> None:
-    if role == "ia":
+    if role in ("ia", "serveur"):
         torch_pin = [line for line in expected("ai/vision/torch-cpu.txt").splitlines() if line and not line.startswith("#")]
         try:
             from importlib.metadata import version
@@ -200,7 +201,7 @@ def check_role(role: str) -> None:
             report("OK" if got == want else "KO", "PyTorch CPU", got,
                    "" if got == want else "pip install -r ai/vision/torch-cpu.txt --index-url https://download.pytorch.org/whl/cpu")
         except ImportError:
-            report("!!", "PyTorch CPU", "absent (utile pour la vision sur le poste)",
+            report("KO" if role == "serveur" else "!!", "PyTorch CPU", "absent (requis par la vision)",
                    "pip install -r ai/vision/torch-cpu.txt --index-url https://download.pytorch.org/whl/cpu")
         check_locked("ai/vision/requirements.txt", "Dépendances vision")
     if role == "cyber":
@@ -213,26 +214,66 @@ def check_role(role: str) -> None:
                "ouvrir le dossier firmware/ dans VS Code avec l'extension PlatformIO")
 
 
-# ----------------------------------------------------------------- Raspberry Pi
-def check_pi() -> None:
-    host = platform.node()
-    report("OK" if host in ("sentinel-pi", "sentinel-pi4") else "!!", "Nom d'hôte", host,
-           "sudo hostnamectl set-hostname sentinel-pi (ou sentinel-pi4)")
+# ----------------------------------------------------------------- fichiers de la stack
+def check_stack_files() -> None:
+    for rel, sev, fix in (
+            ("infra/.env", "KO", "copy infra\\.env.example infra\\.env puis remplir les CHANGE_ME"),
+            ("infra/mosquitto/passwd", "KO", "voir infra/mosquitto/README.md"),
+            ("security/certs/ca.crt", "!!", "fourni par Lisa (tâche l1), requis dès le passage en TLS"),
+            ("ai/vision/models/yolov8n.pt", "!!", "tools\\setup-poste.ps1 -Role serveur (téléchargement, une fois)")):
+        ok = (ROOT / rel).exists()
+        report("OK" if ok else sev, rel, "présent" if ok else "absent", "" if ok else fix)
+    env = ROOT / "infra" / ".env"
+    if env.exists() and "CHANGE_ME" in env.read_text(encoding="utf-8"):
+        report("KO", "infra/.env", "contient encore des CHANGE_ME", "remplacer chaque CHANGE_ME par un secret")
+
+
+# ----------------------------------------------------------------- PC serveur Windows
+def powershell(cmd: str) -> tuple[int, str]:
+    return run(["powershell", "-NoProfile", "-Command", cmd])
+
+
+def check_windows_server() -> None:
+    rc, out = run(["wsl", "--status"])
+    report("OK" if rc == 0 else "KO", "WSL 2 (moteur de Docker Desktop)", "actif" if rc == 0 else "absent",
+           "" if rc == 0 else "wsl --install, puis redémarrer")
+    rc, out = powershell("(Get-NetFirewallRule -DisplayName 'Sentinel-X*' | ForEach-Object DisplayName) -join ', '")
+    report("OK" if out.strip() else "KO", "Pare-feu (443, 8883)", out.strip() or "aucune règle Sentinel-X",
+           "" if out.strip() else "PowerShell administrateur : tools\\serveur-pc.ps1 -Action PareFeu")
+    rc, out = powershell("(Get-NetIPAddress -IPAddress 192.168.137.1 -ErrorAction SilentlyContinue) -ne $null")
+    hot = out.strip().lower() == "true"
+    report("OK" if hot else "!!", "Point d'accès (192.168.137.1)", "actif" if hot else "arrêté",
+           "" if hot else "tools\\serveur-pc.ps1 -Action PointAcces (ou Paramètres > Point d'accès mobile, 2,4 GHz)")
+    rc, out = powershell("(Get-ItemProperty 'HKLM:\\SYSTEM\\CurrentControlSet\\Services\\W32Time"
+                         "\\TimeProviders\\NtpServer').Enabled")
+    report("OK" if out.strip() == "1" else "!!", "Serveur NTP pour l'ESP", "actif" if out.strip() == "1" else "inactif",
+           "" if out.strip() == "1" else "tools\\serveur-pc.ps1 -Action Ntp")
+    check_webcam()
+
+
+def check_webcam() -> None:
+    try:
+        import cv2
+    except ImportError:
+        return report("KO", "Webcam", "OpenCV absent", "tools\\setup-poste.ps1 -Role serveur")
+    cap = cv2.VideoCapture(0, cv2.CAP_DSHOW if os.name == "nt" else cv2.CAP_ANY)
+    ok, frame = cap.read() if cap.isOpened() else (False, None)
+    cap.release()
+    report("OK" if ok else "KO", "Webcam 0", f"{frame.shape[1]}x{frame.shape[0]}" if ok else "aucune image",
+           "" if ok else "brancher la webcam, fermer Teams/Zoom/Caméra qui l'occupent, ou VISION_SOURCE=1 dans infra/.env")
+
+
+# ----------------------------------------------------------------- serveur Linux / Raspberry Pi (portage)
+def check_linux_server() -> None:
     rc, out = run(["vcgencmd", "get_throttled"])
-    if rc:
-        report("!!", "Bridage thermique", "vcgencmd indisponible")
-    else:
-        report("OK" if out.strip().endswith("0x0") else "KO", "Bridage thermique", out,
+    if rc == 0:
+        report("OK" if out.strip().endswith("0x0") else "KO", "Bridage thermique (Raspberry Pi)", out,
                "" if out.strip().endswith("0x0") else "vérifier ventilateur et alimentation")
     rc, out = run(["systemctl", "is-active", "chrony"])
     first = out.splitlines()[0] if out else "inconnu"
-    report("OK" if first == "active" else "!!", "chrony", first, "sudo apt install -y chrony")
-    for rel, sev, fix in ((
-        "infra/.env", "KO", "cp infra/.env.example infra/.env puis remplir"),
-        ("infra/mosquitto/passwd", "KO", "voir infra/mosquitto/README.md"),
-        ("security/certs/ca.crt", "!!", "fourni par Lisa (tâche l1), requis dès le passage en TLS")):
-        ok = (ROOT / rel).exists()
-        report("OK" if ok else sev, rel, "présent" if ok else "absent", "" if ok else fix)
+    report("OK" if first == "active" else "!!", "chrony (NTP pour l'ESP)", first, "sudo apt install -y chrony")
+    report("OK" if pathlib.Path("/dev/video0").exists() else "!!", "Webcam /dev/video0",
+           "présente" if pathlib.Path("/dev/video0").exists() else "absente", "brancher la webcam USB")
 
 
 def main() -> None:
@@ -241,27 +282,36 @@ def main() -> None:
     except AttributeError:
         pass
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--role", choices=["commun", "ia", "iot", "cyber", "integration", "fablab"], default="commun")
-    ap.add_argument("--pi", action="store_true", help="contrôles d'un Raspberry Pi")
+    ap.add_argument("--role", choices=["commun", "ia", "iot", "cyber", "integration", "fablab", "serveur"],
+                    default="commun")
+    ap.add_argument("--linux", "--pi", dest="linux", action="store_true",
+                    help="serveur Linux ou Raspberry Pi (stack et vision dans Docker)")
     a = ap.parse_args()
 
-    check_git(pi=a.pi)
-    if a.pi:
+    check_git(pi=a.linux)
+    if a.linux:
         check_docker(required=True, pi=True)
-        check_pi()
+        check_stack_files()
+        check_linux_server()
     else:
         check_gh()
         check_python()
         check_locked("requirements-dev.txt", "Dépendances Python")
         check_node()
-        check_docker(required=a.role in ("integration", "ia"))
+        check_docker(required=a.role in ("integration", "ia", "serveur"))
         check_mosquitto_clients()
         check_vscode(a.role)
         check_ssh_key()
         check_role(a.role)
+        if a.role == "serveur":
+            check_stack_files()
+            if os.name == "nt":
+                check_windows_server()
+            else:
+                check_webcam()
 
     width = max(len(r[1]) for r in RESULTS)
-    print(f"\nSentinel-X · contrôle {'Raspberry Pi' if a.pi else 'poste'} · rôle {a.role}\n")
+    print(f"\nSentinel-X · contrôle {'serveur Linux' if a.linux else 'poste'} · rôle {a.role}\n")
     for status, name, detail, fix in RESULTS:
         print(f"  [{status}] {name.ljust(width)}  {detail}")
         if fix and status != "OK":

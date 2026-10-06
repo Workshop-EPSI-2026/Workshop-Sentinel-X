@@ -55,6 +55,8 @@ jinja2==3.1.6
     # via torch
 kiwisolver==1.5.0
     # via matplotlib
+lap==0.5.13
+    # via -r ai/vision/requirements.in
 markupsafe==3.0.3
     # via jinja2
 matplotlib==3.11.1
@@ -68,6 +70,7 @@ networkx==3.6.1
 numpy==2.5.2
     # via
     #   contourpy
+    #   lap
     #   matplotlib
     #   ncnn
     #   opencv-python
@@ -75,14 +78,19 @@ numpy==2.5.2
     #   torchvision
     #   ultralytics
     #   ultralytics-thop
-opencv-python==5.0.0.93
+nvidia-ml-py==13.610.43
+    # via ultralytics
+opencv-python==4.14.0.94
     # via
+    #   -r ai/vision/requirements.in
     #   ncnn
     #   ultralytics
 opencv-python-headless==4.14.0.94
     # via -r ai/vision/requirements.in
 packaging==26.3
     # via matplotlib
+paho-mqtt==2.1.0
+    # via -r ai/vision/requirements.in
 pillow==12.3.0
     # via
     #   matplotlib

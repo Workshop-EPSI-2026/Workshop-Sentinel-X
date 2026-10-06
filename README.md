@@ -1,18 +1,19 @@
 # Sentinel-X
 
 > Workshop M1 EPSI 2026 · Mission Sentinel-X pour AetherCorp Industrial Solutions.
-> Boîtier de surveillance autonome : ESP32-S3 et capteurs, Raspberry Pi 5 embarqué (Option A, Pi 4 en repli),
-> détection multicouche (environnement, intrusion, cyber), flux chiffrés de bout en bout.
+> Boîtier de surveillance autonome : ESP32-S3 et capteurs, **PC portable serveur** (Option B : Windows 11 + Docker
+> Desktop, vision sur la webcam), deux IA (vision et Sentinel Brain), détection multicouche (environnement, intrusion,
+> cyber), flux chiffrés de bout en bout. Portable tel quel sur un serveur Linux ou un Raspberry Pi 5.
 
 ## Équipe
 
 | Membre | Rôle |
 |---|---|
-| Constantin | Lead intégration · Backend · Stack Docker sur le Pi · Dashboard |
+| Constantin | Lead intégration · Backend · Stack Docker sur le PC serveur · Dashboard |
 | Jeffrick | Lead IA et data · Anomalies · Vision · BDD · Pitch |
 | Momo | Lead embarqué · Firmware ESP32-S3 · Câblage |
 | Lisa | Lead cybersécurité · PKI · Hardening · Audit · Dossier |
-| Michel | Raspberry Pi et réseau de table · Matériel · Fablab · Vidéo |
+| Michel | PC serveur et réseau de table (point d'accès, pare-feu) · Matériel · Fablab · Vidéo |
 
 Répartition détaillée, binômes et charge : [`docs/repartition.md`](docs/repartition.md).
 
@@ -33,7 +34,8 @@ cd Workshop-Sentinel-X
 
 Une commande installe les logiciels (winget), Node.js, les extensions VS Code, règle Git, crée la clé SSH
 et l'environnement Python aux versions exactes, puis contrôle le poste. Remplacer `<rôle>` par le vôtre :
-`ia` (Jeffrick), `iot` (Momo, Michel), `cyber` (Lisa), `integration` (Constantin), `fablab` (Michel).
+`ia` (Jeffrick), `iot` (Momo, Michel), `cyber` (Lisa), `integration` (Constantin), `fablab` (Michel),
+`serveur` (le PC qui fait tourner Sentinel-X : Docker, vision, modèle YOLO).
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File tools\setup-poste.ps1 -Role <rôle>
@@ -90,9 +92,10 @@ pip install -r requirements-dev.txt
 |---|---|
 | `ia` | `pip install -r ai\vision\torch-cpu.txt --index-url https://download.pytorch.org/whl/cpu` puis `pip install -r ai\vision\requirements.txt` |
 | `iot` | Extension PlatformIO : `code --install-extension platformio.platformio-ide` |
-| `cyber` | `winget install --id Insecure.Nmap -e` et `winget install --id WiresharkFoundation.Wireshark -e` ; Metasploit s'installe sur la station d'audit (Pi 4 : `sudo apt install metasploit-framework`) |
+| `serveur` | Comme `ia`, puis le modèle : `python -c "from ultralytics import YOLO; YOLO(r'ai\vision\models\yolov8n.pt')"` |
+| `cyber` | `winget install --id Insecure.Nmap -e` et `winget install --id WiresharkFoundation.Wireshark -e` ; Metasploit en conteneur : `docker run --rm -it metasploitframework/metasploit-framework` |
 | `integration` | `winget install --id OBSProject.OBSStudio -e` |
-| `fablab` | `winget install --id RaspberryPiFoundation.RaspberryPiImager -e` |
+| `fablab` | Fusion 360 (licence étudiante, autodesk.com) |
 
 ### Contrôler son poste
 
@@ -114,13 +117,13 @@ git pull
 
 Si `git pull` a modifié un fichier `requirements*.txt` : `pip install -r requirements-dev.txt`.
 
-### Sur les Raspberry Pi
+### Sur le PC serveur (une fois)
 
-Pas de `.venv` : les services tournent dans Docker, aux versions figées. Après le clone :
-
-```bash
-python3 tools/doctor.py --pi
-cd infra && docker compose build && docker compose up -d
+```powershell
+powershell -ExecutionPolicy Bypass -File tools\setup-poste.ps1 -Role serveur
+# PowerShell ADMINISTRATEUR : pare-feu (443, 8883), heure NTP pour l'ESP, point d'accès Wi-Fi 2,4 GHz
+powershell -ExecutionPolicy Bypass -File tools\serveur-pc.ps1 -Ssid sentinel-x-gN
+python tools\doctor.py --role serveur
 ```
 
 ### Ajouter une bibliothèque Python
@@ -135,24 +138,23 @@ pip install -r requirements-dev.txt
 
 Commiter les `.in` et les `.txt` ensemble, par Pull Request. La CI refuse un `.in` modifié sans régénération.
 
-## Architecture v2
-
-
+## Architecture v3 (PC serveur)
 
 Référence complète : [`docs/architecture.md`](docs/architecture.md).
 
 ```
 ESP32-S3 N16R8 + DHT11 / MQ-2 / PIR / effraction tactile
    garde locale, alarme réflexe, tampon PSRAM, voyant RGB
-        │  Wi-Fi WPA2 (point d'accès du Pi 5) · MQTTS 8883 (TLS mutuel en cible)
+        │  Wi-Fi WPA2 2,4 GHz (point d'accès du PC) · MQTTS 8883 (TLS mutuel en cible)
         ▼
-Raspberry Pi 5 (sentinel-pi, 192.168.10.1) — Docker Compose      Pi 4 (192.168.10.2) : repli + audit
-  ├─ mosquitto   8883 boîtiers [publié] · 8884 services [interne]
-  ├─ api         REST, WebSocket, incidents, profil de site
-  ├─ postgres    historique (réseau interne)
-  ├─ vision      YOLO NCNN, suivi, zone, caméra masquée, /video
-  ├─ anomaly     Sentinel Brain : 4 couches + fusion + score expliqué
-  └─ nginx       HTTPS/WSS + dashboard                         [publié : 443]
+PC portable Windows 11 (sentinel-pc, 192.168.137.1)
+  ├─ vision (Python, hors Docker)   webcam, YOLOv8n + suivi, zone, badges ArUco, caméra masquée, /video
+  └─ Docker Desktop
+       ├─ mosquitto   8883 boîtier et vision [publié] · 8884 services [interne]
+       ├─ anomaly     Sentinel Brain : 4 couches + fusion vision + incidents expliqués
+       ├─ api         REST, WebSocket, incidents, profil de site
+       ├─ postgres    historique (réseau interne)
+       └─ nginx       HTTPS/WSS + dashboard + /video        [publié : 443]
 ```
 
 Contrat : [`docs/contracts.md`](docs/contracts.md) · Câblage : [`docs/cablage.md`](docs/cablage.md) ·
@@ -168,33 +170,37 @@ Profil de site : [`config/site.example.yml`](config/site.example.yml).
 | `api/` | API REST + WebSocket | Constantin |
 | `dashboard/` | Interface web (compilée sur laptop) | Constantin |
 | `ai/vision/`, `ai/anomaly/` | Vision et Sentinel Brain | Jeffrick |
-| `infra/` | `docker-compose.yml`, Mosquitto, nginx, init PostgreSQL | Constantin, Michel |
+| `infra/` | `docker-compose.yml` (+ `.dev`, `.linux`), Mosquitto, nginx, schéma PostgreSQL | Constantin, Michel, Jeffrick (schéma) |
 | `security/` | PKI (sans clés), hardening, audits | Lisa |
 | `docs/` | Contrat, réseau, câblage, fablab, preuves, dossier | Tous |
-| `tools/` | Création du dépôt, simulateur d'ESP | Constantin, Jeffrick |
+| `tools/` | Installation et contrôle des postes, préparation et démarrage du PC serveur, simulateur d'ESP, Kanban | Tous |
 | `.github/` | CI, modèles d'issues et de PR, CODEOWNERS, plan du Kanban | Constantin |
 
-## Démarrer la stack (sur le Pi 5, ou le Pi 4 de repli)
+## Démarrer Sentinel-X (sur le PC serveur)
 
-```bash
-git clone <url-du-dépôt> sentinel-x && cd sentinel-x/infra
-cp .env.example .env             # remplir toutes les valeurs CHANGE_ME
-# créer infra/mosquitto/passwd : voir infra/mosquitto/README.md
-docker compose up -d             # lundi : mosquitto + postgres, MQTT 1883 authentifié
-docker compose ps                # tous les services doivent être "healthy"
+```powershell
+copy infra\.env.example infra\.env    # remplir toutes les valeurs CHANGE_ME
+# créer infra\mosquitto\passwd : voir infra\mosquitto\README.md
+powershell -ExecutionPolicy Bypass -File tools\demarrer.ps1              # Docker Desktop + stack + vision
+powershell -ExecutionPolicy Bypass -File tools\demarrer.ps1 -Arreter     # tout arrêter (données conservées)
 ```
 
-Progression dans `infra/.env` :
+Progression dans `infra\.env` :
 
 | Moment | `COMPOSE_FILE` | `MQTT_PORT` / `MQTT_TLS` | `COMPOSE_PROFILES` |
 |---|---|---|---|
-| Lundi | `docker-compose.yml:docker-compose.dev.yml` | `1883` / `false` | *(vide)* |
+| Socle | `docker-compose.yml:docker-compose.dev.yml` | `1883` / `false` | *(vide)* |
 | Dès que l'API existe | idem | idem | `app` |
-| Mardi, après les certificats de Lisa | `docker-compose.yml` | `8884` / `true` | `app` |
-| Dès que les services IA existent | `docker-compose.yml` | `8884` / `true` | `app,ai` |
+| Après les certificats de Lisa | `docker-compose.yml` | `8884` / `true` | `app` |
+| Dès que Brain est prêt | `docker-compose.yml` | `8884` / `true` | `app,ai` |
 | TLS mutuel prêt | idem, avec `MOSQUITTO_CONF=mosquitto.mtls.conf` | `8884` / `true` | `app,ai` |
 
-Puis `docker compose up -d --build` à chaque changement.
+`demarrer.ps1` relance `docker compose up -d --build` à chaque fois. Le séparateur `:` de `COMPOSE_FILE` est garanti
+sous Windows par `COMPOSE_PATH_SEPARATOR=:` dans `.env`. Sous Linux ou sur un Raspberry Pi, ajouter
+`:docker-compose.linux.yml` (vision dans un conteneur) et contrôler avec `python3 tools/doctor.py --linux`.
+
+Plan B sans webcam : `python ai\vision\tools\demo_video.py` puis
+`tools\demarrer.ps1 -Source ai\vision\data\demo.mp4`.
 
 ## Règles Git de l'équipe
 
@@ -233,7 +239,7 @@ python3 tools/bootstrap_github.py               # créer
 # quand tout le monde a accepté l'invitation :
 python3 tools/bootstrap_github.py --assign-only
 # après une mise à jour de tasks.yml (titres, contenus, nouvelles tâches) :
-python3 tools/bootstrap_github.py --sync
+python3 tools/bootstrap_github.py --sync        # met à jour, crée, et ferme les tâches faites ou retirées
 ```
 Le script crée le dépôt privé, pousse ce squelette, invite les 4 autres membres, crée labels,
 jalons, les issues, la protection de `main` et le projet Kanban.

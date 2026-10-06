@@ -1,7 +1,7 @@
 # =============================================================================
-#  Surcharge "lundi" : MQTT en clair sur 1883 (avec identifiants), avant TLS.
-#  Activée via COMPOSE_FILE dans .env. À SUPPRIMER de COMPOSE_FILE dès que
-#  l'ESP publie en 8883 (tâche mo2) : 1883 doit alors être fermé.
+#  Surcharge "socle" : MQTT en clair sur 1883 (avec identifiants), avant TLS.
+#  Activée via COMPOSE_FILE dans .env. À RETIRER de COMPOSE_FILE dès que l'ESP publie en 8883
+#  (tâche mo2) : 1883 doit alors être fermé (et la règle de pare-feu 1883 supprimée).
 # =============================================================================
 services:
   mosquitto:

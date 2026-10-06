@@ -25,7 +25,8 @@ PY = "3.12"
 # pas encore éprouvées. Repousser cette date est une décision d'équipe (Pull Request).
 EXCLUDE_NEWER = "2026-08-15"
 TARGETS = ["tools", "api", "ai/anomaly", "ai/vision", "."]
-TORCH_STACK = re.compile(r"^(torch|torchvision|triton|nvidia-[a-z0-9-]+|cuda-[a-z0-9-]+)==", re.I)
+# nvidia-ml-py (supervision GPU, tiré par Ultralytics) est un petit paquet pur Python : on le garde dans le verrou
+TORCH_STACK = re.compile(r"^(torch|torchvision|triton|nvidia-(?!ml-py)[a-z0-9-]+|cuda-[a-z0-9-]+)==", re.I)
 
 
 def compile_one(src: pathlib.Path) -> str:
