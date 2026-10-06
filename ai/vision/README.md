@@ -1,7 +1,7 @@
 # Vision (`ai/vision`) — tâche je1, Jeffrick (binôme : Momo)
 
 Sous Windows, Docker Desktop ne donne pas accès à la webcam : **la vision tourne directement sur le PC serveur**,
-dans le `.venv` (`tools\setup-poste.ps1 -Role serveur`). `tools\demarrer.ps1` la lance avec le reste.
+dans le `.venv` (installé sur tous les postes par `installer.cmd`). `tools\demarrer.ps1` la lance avec le reste.
 Sous Linux ou sur un Raspberry Pi, le même code tourne dans un conteneur (`infra/docker-compose.linux.yml`).
 
 | Fichier | Rôle |
@@ -28,7 +28,7 @@ python tools\benchmark.py                                  # tableau de latence 
 python -m unittest discover -s tests -v
 ```
 
-Le modèle `yolov8n.pt` (6 Mo) est téléchargé dans `models\` par `setup-poste.ps1 -Role serveur`. Une fois présent,
+Le modèle `yolov8n.pt` (6 Mo) est téléchargé dans `models\` par `installer.cmd`. Une fois présent,
 la vision ne contacte plus Internet (`YOLO_OFFLINE`). Sur Raspberry Pi : `python tools\benchmark.py --ncnn` crée
 `yolov8n_ncnn_model`, 2 à 3 fois plus rapide sur processeur ARM (`VISION_MODEL=yolov8n_ncnn_model`).
 

@@ -228,7 +228,7 @@ taches:
   fini_quand: Validation obtenue.
   fait: false
 - id: p1
-  titre: Préparer le PC serveur (Windows 11, Docker Desktop, vision)
+  titre: Choisir le poste serveur (verifier-serveur.cmd) et le préparer
   jour: Lundi
   creneau: Lundi 13h30 – 17h30
   duree: 1 h
@@ -243,12 +243,12 @@ taches:
   - infra
   - bloquant
   detail:
-  - Choisir le PC le plus puissant de l’équipe (processeur récent, 16 Go de RAM si possible, webcam USB).
-  - 'powershell -ExecutionPolicy Bypass -File tools\setup-poste.ps1 -Role serveur : Docker Desktop (moteur WSL 2), .venv,
-    vision, modèle yolov8n.pt.'
+  - 'Sur chaque poste candidat : installer.cmd (déjà fait par tous), puis verifier-serveur.cmd : verdict « PEUT être le
+    serveur » ou non (mémoire, processeur, disque, Wi-Fi, WSL 2, Docker, webcam, vitesse YOLO).'
+  - Choisir comme serveur le poste qui a les meilleurs résultats, et un deuxième poste qui passe aussi comme secours.
   - Désactiver la veille et reporter les mises à jour Windows jusqu’à vendredi ; Docker Desktop lancé au démarrage.
   - Préparer de la même façon un deuxième PC de secours. Michel exécute, Constantin accompagne.
-  fini_quand: python tools\doctor.py --role serveur sans [KO] sur les deux PC, docker run hello-world passe, la webcam donne
+  fini_quand: verifier-serveur.cmd sans [KO] sur les deux PC, docker run hello-world passe, la webcam donne
     une image.
   fait: false
 - id: c1

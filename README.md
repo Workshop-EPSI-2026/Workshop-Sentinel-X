@@ -32,14 +32,20 @@ cd Workshop-Sentinel-X
 
 ### Chemin A — installation automatique (recommandé)
 
-Une commande installe les logiciels (winget), Node.js, les extensions VS Code, règle Git, crée la clé SSH
-et l'environnement Python aux versions exactes, puis contrôle le poste. Remplacer `<rôle>` par le vôtre :
-`ia` (Jeffrick), `iot` (Momo, Michel), `cyber` (Lisa), `integration` (Constantin), `fablab` (Michel),
-`serveur` (le PC qui fait tourner Sentinel-X : Docker, vision, modèle YOLO).
+Après le clone, **une seule commande installe tout le projet**, pour tout le monde : logiciels (winget), Node.js,
+extensions VS Code, réglages Git, clé SSH, dépendances Python de tous les dossiers (API, Sentinel Brain, vision avec
+PyTorch CPU) et le modèle YOLOv8n, puis contrôle le poste. Pas de rôle à choisir.
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File tools\setup-poste.ps1 -Role <rôle>
+git clone https://github.com/Workshop-EPSI-2026/Workshop-Sentinel-X.git
+cd Workshop-Sentinel-X
+.\installer.cmd
 ```
+
+(ou double-clic sur `installer.cmd` dans l'explorateur). Logiciels déjà installés : `.\installer.cmd -SkipSoftware`.
+
+**N'importe quel poste de l'équipe peut être le serveur.** `verifier-serveur.cmd` dit si le vôtre en est capable :
+mémoire, processeur, disque, carte Wi-Fi, WSL 2 et Docker, webcam et vitesse réelle de YOLO, avec un verdict à la fin.
 
 Fermer puis rouvrir PowerShell si le script le demande (après l'installation de Node ou de VS Code), et le
 relancer : il reprend là où il en était. À la fin, il affiche le contrôle du poste.
@@ -86,21 +92,24 @@ python -m pip install --upgrade pip
 pip install -r requirements-dev.txt
 ```
 
-4. Outils du rôle en plus :
+4. Vision (tout le monde) et modèle YOLO :
 
-| Rôle | Commandes supplémentaires |
-|---|---|
-| `ia` | `pip install -r ai\vision\torch-cpu.txt --index-url https://download.pytorch.org/whl/cpu` puis `pip install -r ai\vision\requirements.txt` |
-| `iot` | Extension PlatformIO : `code --install-extension platformio.platformio-ide` |
-| `serveur` | Comme `ia`, puis le modèle : `python -c "from ultralytics import YOLO; YOLO(r'ai\vision\models\yolov8n.pt')"` |
-| `cyber` | `winget install --id Insecure.Nmap -e` et `winget install --id WiresharkFoundation.Wireshark -e` ; Metasploit en conteneur : `docker run --rm -it metasploitframework/metasploit-framework` |
-| `integration` | `winget install --id OBSProject.OBSStudio -e` |
-| `fablab` | Fusion 360 (licence étudiante, autodesk.com) |
+```powershell
+pip install -r ai\vision\torch-cpu.txt --index-url https://download.pytorch.org/whl/cpu
+pip install -r ai\vision\requirements.txt
+python -c "from ultralytics import YOLO; YOLO(r'ai\vision\models\yolov8n.pt')"
+```
+
+Outils facultatifs, selon ce que l'on fait : Nmap et Wireshark (`winget install --id Insecure.Nmap -e`,
+`winget install --id WiresharkFoundation.Wireshark -e`), Metasploit en conteneur
+(`docker run --rm -it metasploitframework/metasploit-framework`), OBS Studio (`winget install --id OBSProject.OBSStudio -e`),
+Arduino IDE 2 pour le firmware.
 
 ### Contrôler son poste
 
 ```powershell
-python tools\doctor.py --role <rôle>
+python tools\doctor.py              # tout le projet est-il installé ?
+.\verifier-serveur.cmd                # ce poste peut-il être le serveur ?
 ```
 
 Objectif : aucune ligne `[KO]`. Chaque ligne en défaut indique la commande de correction. `[!!]` signale un
@@ -117,13 +126,13 @@ git pull
 
 Si `git pull` a modifié un fichier `requirements*.txt` : `pip install -r requirements-dev.txt`.
 
-### Sur le PC serveur (une fois)
+### Sur le poste choisi comme serveur (une fois)
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File tools\setup-poste.ps1 -Role serveur
+# Après installer.cmd, si verifier-serveur.cmd donne « PEUT être le serveur » :
 # PowerShell ADMINISTRATEUR : pare-feu (443, 8883), heure NTP pour l'ESP, point d'accès Wi-Fi 2,4 GHz
 powershell -ExecutionPolicy Bypass -File tools\serveur-pc.ps1 -Ssid sentinel-x-gN
-python tools\doctor.py --role serveur
+python tools\doctor.py --serveur
 ```
 
 ### Ajouter une bibliothèque Python

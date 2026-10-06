@@ -49,7 +49,8 @@ Wi-Fi, réglé ainsi pour que **rien ne change côté ESP** :
 
 ## Bascule sur le PC de secours (à répéter mercredi, objectif < 10 min)
 
-1. Sur le PC de secours : dépôt à jour, `tools\setup-poste.ps1 -Role serveur` déjà fait la veille.
+1. Sur le PC de secours (n'importe quel autre poste qui passe `verifier-serveur.cmd`) : dépôt à jour, `installer.cmd`
+   déjà fait la veille.
 2. Copier (clé USB) `infra\.env`, `infra\mosquitto\passwd`, `security\certs\`.
 3. `tools\serveur-pc.ps1` (administrateur) avec le même SSID et la même phrase de passe, puis éteindre le point
    d'accès du premier PC.

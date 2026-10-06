@@ -11,7 +11,7 @@
     powershell -ExecutionPolicy Bypass -File tools\demarrer.ps1 -Arreter        # arrete tout (donnees conservees)
 
   Prealables : infra\.env rempli, infra\mosquitto\passwd cree (infra\mosquitto\README.md),
-  .venv avec la vision (tools\setup-poste.ps1 -Role serveur), certificats de Lisa des le passage en TLS.
+  .venv avec la vision (installer.cmd), certificats de Lisa des le passage en TLS.
 #>
 param(
   [string]$Source,
@@ -84,9 +84,9 @@ if (-not $SansVision) {
   Step "4/4 Vision (webcam, hors Docker)"
   Stop-Vision
   $py = Join-Path $Root '.venv\Scripts\python.exe'
-  if (-not (Test-Path $py)) { Fail ".venv absent : tools\setup-poste.ps1 -Role serveur" }
+  if (-not (Test-Path $py)) { Fail ".venv absent : lancer installer.cmd" }
   & $py -c "import ultralytics, cv2" 2>$null
-  if ($LASTEXITCODE -ne 0) { Fail "dependances vision absentes : tools\setup-poste.ps1 -Role serveur" }
+  if ($LASTEXITCODE -ne 0) { Fail "dependances vision absentes : relancer installer.cmd" }
   $src = if ($Source) { (Resolve-Path $Source).Path } elseif ($envs['VISION_SOURCE']) { $envs['VISION_SOURCE'] } else { '0' }
   $model = if ($envs['VISION_MODEL']) { $envs['VISION_MODEL'] } else { 'yolov8n.pt' }
   $cmd = "Set-Location '$Root\ai\vision'; `$host.UI.RawUI.WindowTitle = 'Sentinel-X vision'; " +

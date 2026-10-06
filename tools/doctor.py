@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 """
-Sentinel-X — contrôle de l'environnement d'un poste, du PC serveur ou d'un serveur Linux / Raspberry Pi.
+Sentinel-X — contrôle d'un poste de l'équipe, et de sa capacité à servir de serveur.
 
-    python tools/doctor.py                     # poste, rôle commun
-    python tools/doctor.py --role ia           # + contrôles du rôle (ia, iot, cyber, integration, fablab)
-    python tools/doctor.py --role serveur      # PC serveur Windows : Docker, vision, webcam, pare-feu, point d'accès
+    python tools/doctor.py                     # poste : tout le projet est-il installé ?
+    python tools/doctor.py --serveur           # + ce poste peut-il être LE serveur ? (matériel, Docker, webcam, YOLO)
     python3 tools/doctor.py --linux            # serveur Linux ou Raspberry Pi (portage)
+
+N'importe quel poste de l'équipe peut être le serveur s'il passe --serveur sans [KO] (verifier-serveur.cmd).
 
 [OK] conforme · [!!] à surveiller (n'empêche pas de travailler) · [KO] à corriger.
 Code de sortie 1 s'il reste au moins un [KO] : utilisable dans un script.
@@ -24,6 +25,8 @@ import sys
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 RESULTS: list[tuple[str, str, str, str]] = []
+CAPACITY: set[str] = set()      # contrôles qui décident si le poste PEUT être le serveur
+SETUP: set[str] = set()         # réglages à faire une fois sur le poste choisi comme serveur
 
 
 def run(cmd: list[str]) -> tuple[int, str]:
@@ -151,10 +154,11 @@ def check_docker(required: bool, pi: bool = False) -> None:
         return report("KO" if required else "!!", "Docker", "absent", fix)
     report("OK", "Docker", out.replace("Docker version ", ""))
     rc, out = run(["docker", "compose", "version"])
-    if rc or "v2" not in out and " 2." not in out:
-        report("KO", "Docker Compose v2", out or "absent", "mettre à jour Docker")
+    m = re.search(r"v?(\d+)\.(\d+)", out or "")
+    if rc or not m or int(m.group(1)) < 2:
+        report("KO", "Docker Compose (v2 ou plus)", out or "absent", "mettre à jour Docker Desktop")
     else:
-        report("OK", "Docker Compose v2", out.split()[-1])
+        report("OK", "Docker Compose (v2 ou plus)", out.split()[-1])
     rc, _ = run(["docker", "info"])
     if rc:
         report("!!", "Moteur Docker", "arrêté", "lancer Docker Desktop (Linux : sudo systemctl start docker)")
@@ -165,18 +169,17 @@ def check_mosquitto_clients() -> None:
     if any(c and os.path.exists(c) for c in candidates):
         report("OK", "Clients Mosquitto", "mosquitto_sub trouvé")
     else:
-        report("KO", "Clients Mosquitto", "absents",
+        report("!!", "Clients Mosquitto", "absents (utiles pour tester le broker)",
                "https://mosquitto.org/download/ puis ajouter C:\\Program Files\\mosquitto au Path")
 
 
-def check_vscode(role: str) -> None:
+def check_vscode() -> None:
     rc, out = run(["code", "--list-extensions"])
     if rc:
         return report("!!", "VS Code", "commande code introuvable", "winget install --id Microsoft.VisualStudioCode -e")
     have = {x.strip().lower() for x in out.splitlines()}
     wanted = json.loads((ROOT / ".vscode/extensions.json").read_text(encoding="utf-8"))["recommendations"]
-    if role != "iot":
-        wanted = [w for w in wanted if w != "platformio.platformio-ide"]
+    wanted = [w for w in wanted if w != "platformio.platformio-ide"]   # facultative : le firmware se fait dans l'Arduino IDE
     missing = [w for w in wanted if w.lower() not in have]
     report("OK" if not missing else "!!", "Extensions VS Code",
            "toutes présentes" if not missing else "manquantes : " + ", ".join(missing),
@@ -189,78 +192,168 @@ def check_ssh_key() -> None:
            "" if key.exists() else 'ssh-keygen -t ed25519 -C "prenom@sentinel"')
 
 
-def check_role(role: str) -> None:
-    if role in ("ia", "serveur"):
-        torch_pin = [line for line in expected("ai/vision/torch-cpu.txt").splitlines() if line and not line.startswith("#")]
-        try:
-            from importlib.metadata import version
-
-            import torch  # noqa: F401
-            got = version("torch").split("+")[0]
-            want = torch_pin[0].split("==")[1]
-            report("OK" if got == want else "KO", "PyTorch CPU", got,
-                   "" if got == want else "pip install -r ai/vision/torch-cpu.txt --index-url https://download.pytorch.org/whl/cpu")
-        except ImportError:
-            report("KO" if role == "serveur" else "!!", "PyTorch CPU", "absent (requis par la vision)",
-                   "pip install -r ai/vision/torch-cpu.txt --index-url https://download.pytorch.org/whl/cpu")
-        check_locked("ai/vision/requirements.txt", "Dépendances vision")
-    if role == "cyber":
-        for tool, fix in (("nmap", "winget install --id Insecure.Nmap -e"),
-                          ("openssl", "fourni par Git Bash (C:\\Program Files\\Git\\usr\\bin)")):
-            report("OK" if shutil.which(tool) else "!!", tool, "trouvé" if shutil.which(tool) else "absent du Path", fix)
-    if role == "iot":
-        pio = shutil.which("pio") or (pathlib.Path.home() / ".platformio" / "penv").exists()
-        report("OK" if pio else "!!", "PlatformIO", "installé" if pio else "pas encore initialisé",
-               "ouvrir le dossier firmware/ dans VS Code avec l'extension PlatformIO")
+def check_project_deps() -> None:
+    """Dépendances de tout le projet : PyTorch CPU + vision (en plus de requirements-dev.txt), modèle YOLO."""
+    torch_pin = [line for line in expected("ai/vision/torch-cpu.txt").splitlines() if line and not line.startswith("#")]
+    fix = "pip install -r ai/vision/torch-cpu.txt --index-url https://download.pytorch.org/whl/cpu"
+    try:
+        from importlib.metadata import PackageNotFoundError, version
+        got = version("torch").split("+")[0]
+        want = torch_pin[0].split("==")[1]
+        report("OK" if got == want else "KO", "PyTorch CPU", got + ("" if got == want else f" (attendu {want})"),
+               "" if got == want else fix)
+    except PackageNotFoundError:
+        report("KO", "PyTorch CPU", "absent (requis par la vision)", fix)
+    check_locked("ai/vision/requirements.txt", "Dépendances vision")
+    model = ROOT / "ai/vision/models/yolov8n.pt"
+    report("OK" if model.exists() else "KO", "Modèle YOLOv8n", "présent" if model.exists() else "absent",
+           "" if model.exists() else "relancer installer.cmd (téléchargement de 6 Mo, une fois)")
 
 
 # ----------------------------------------------------------------- fichiers de la stack
 def check_stack_files() -> None:
     for rel, sev, fix in (
-            ("infra/.env", "KO", "copy infra\\.env.example infra\\.env puis remplir les CHANGE_ME"),
-            ("infra/mosquitto/passwd", "KO", "voir infra/mosquitto/README.md"),
+            ("infra/.env", "!!", "copy infra\\.env.example infra\\.env puis remplir les CHANGE_ME"),
+            ("infra/mosquitto/passwd", "!!", "voir infra/mosquitto/README.md"),
             ("security/certs/ca.crt", "!!", "fourni par Lisa (tâche l1), requis dès le passage en TLS"),
-            ("ai/vision/models/yolov8n.pt", "!!", "tools\\setup-poste.ps1 -Role serveur (téléchargement, une fois)")):
+            ):
         ok = (ROOT / rel).exists()
         report("OK" if ok else sev, rel, "présent" if ok else "absent", "" if ok else fix)
+        SETUP.add(rel)
     env = ROOT / "infra" / ".env"
     if env.exists() and "CHANGE_ME" in env.read_text(encoding="utf-8"):
-        report("KO", "infra/.env", "contient encore des CHANGE_ME", "remplacer chaque CHANGE_ME par un secret")
+        report("!!", "infra/.env ", "contient encore des CHANGE_ME", "remplacer chaque CHANGE_ME par un secret")
+        SETUP.add("infra/.env ")
 
 
-# ----------------------------------------------------------------- PC serveur Windows
+# ----------------------------------------------------------------- ce poste peut-il être le serveur ?
+MIN_RAM_GB, OK_RAM_GB = 7.5, 11.5          # Docker Desktop (~2 Go) + PostgreSQL + Brain + vision (~1,5 Go) + Windows
+MIN_CORES, OK_CORES = 4, 6
+MIN_DISK_GB, OK_DISK_GB = 15, 30       # images Docker (~3 Go), .venv avec PyTorch (~2 Go), base, journaux
+MIN_FPS, OK_FPS = 5.0, 10.0            # YOLOv8n à 320 px sur le processeur
+
+
+def capacity(status: str, name: str, detail: str, fix: str = "") -> None:
+    report(status, name, detail, fix)
+    CAPACITY.add(name)
+
+
+def setup(status: str, name: str, detail: str, fix: str = "") -> None:
+    report(status, name, detail, fix)
+    SETUP.add(name)
+
+
+def grade(value: float, minimum: float, good: float) -> str:
+    return "OK" if value >= good else ("!!" if value >= minimum else "KO")
+
+
 def powershell(cmd: str) -> tuple[int, str]:
     return run(["powershell", "-NoProfile", "-Command", cmd])
 
 
-def check_windows_server() -> None:
-    rc, out = run(["wsl", "--status"])
-    report("OK" if rc == 0 else "KO", "WSL 2 (moteur de Docker Desktop)", "actif" if rc == 0 else "absent",
-           "" if rc == 0 else "wsl --install, puis redémarrer")
-    rc, out = powershell("(Get-NetFirewallRule -DisplayName 'Sentinel-X*' | ForEach-Object DisplayName) -join ', '")
-    report("OK" if out.strip() else "KO", "Pare-feu (443, 8883)", out.strip() or "aucune règle Sentinel-X",
-           "" if out.strip() else "PowerShell administrateur : tools\\serveur-pc.ps1 -Action PareFeu")
-    rc, out = powershell("(Get-NetIPAddress -IPAddress 192.168.137.1 -ErrorAction SilentlyContinue) -ne $null")
-    hot = out.strip().lower() == "true"
-    report("OK" if hot else "!!", "Point d'accès (192.168.137.1)", "actif" if hot else "arrêté",
-           "" if hot else "tools\\serveur-pc.ps1 -Action PointAcces (ou Paramètres > Point d'accès mobile, 2,4 GHz)")
-    rc, out = powershell("(Get-ItemProperty 'HKLM:\\SYSTEM\\CurrentControlSet\\Services\\W32Time"
-                         "\\TimeProviders\\NtpServer').Enabled")
-    report("OK" if out.strip() == "1" else "!!", "Serveur NTP pour l'ESP", "actif" if out.strip() == "1" else "inactif",
-           "" if out.strip() == "1" else "tools\\serveur-pc.ps1 -Action Ntp")
-    check_webcam()
+def total_ram_gb() -> float:
+    try:
+        import psutil
+        return psutil.virtual_memory().total / 2**30
+    except ImportError:
+        pass
+    if os.name == "nt":
+        import ctypes
+
+        class MemStatus(ctypes.Structure):
+            _fields_ = [("dwLength", ctypes.c_ulong), ("dwMemoryLoad", ctypes.c_ulong),
+                        ("ullTotalPhys", ctypes.c_ulonglong), ("ullAvailPhys", ctypes.c_ulonglong),
+                        ("ullTotalPageFile", ctypes.c_ulonglong), ("ullAvailPageFile", ctypes.c_ulonglong),
+                        ("ullTotalVirtual", ctypes.c_ulonglong), ("ullAvailVirtual", ctypes.c_ulonglong),
+                        ("ullAvailExtendedVirtual", ctypes.c_ulonglong)]
+        st = MemStatus()
+        st.dwLength = ctypes.sizeof(MemStatus)
+        ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(st))
+        return st.ullTotalPhys / 2**30
+    with open("/proc/meminfo", encoding="utf-8") as f:
+        return int(f.readline().split()[1]) / 2**20
+
+
+def check_hardware() -> None:
+    if os.name == "nt":
+        build = int(platform.version().split(".")[-1]) if platform.version().split(".")[-1].isdigit() else 0
+        name = "Windows 11" if build >= 22000 else f"Windows 10 (build {build})"
+        capacity("OK" if build >= 19041 else "KO", "Système", name,
+                 "" if build >= 19041 else "Windows 10 2004 ou plus récent requis par Docker Desktop (WSL 2)")
+    else:
+        capacity("OK", "Système", f"{platform.system()} {platform.release()} (serveur : voir --linux)")
+    ram = total_ram_gb()
+    capacity(grade(ram, MIN_RAM_GB, OK_RAM_GB), "Mémoire vive", f"{ram:.1f} Go (minimum 8 Go, conseillé 12 Go)",
+             "" if ram >= MIN_RAM_GB else "prendre le poste d'un collègue qui a plus de mémoire")
+    cores = os.cpu_count() or 1
+    capacity(grade(cores, MIN_CORES, OK_CORES), "Processeur", f"{cores} cœurs logiques (minimum {MIN_CORES})",
+             "" if cores >= MIN_CORES else "prendre un poste plus puissant")
+    free = shutil.disk_usage(ROOT).free / 2**30
+    capacity(grade(free, MIN_DISK_GB, OK_DISK_GB), "Disque libre", f"{free:.0f} Go (minimum {MIN_DISK_GB})",
+             "" if free >= MIN_DISK_GB else "libérer de la place (Téléchargements, corbeille)")
+    if os.name == "nt":
+        rc, out = run(["netsh", "wlan", "show", "interfaces"])
+        wifi = rc == 0 and bool(re.search(r"^\s*(Name|Nom)\s*:", out, re.M))
+        capacity("OK" if wifi else "KO", "Carte Wi-Fi (point d'accès)", "présente" if wifi else "absente",
+                 "" if wifi else "il faut une carte Wi-Fi pour créer le réseau du boîtier (ou le routeur de secours)")
+        rc, _ = run(["wsl", "--status"])
+        capacity("OK" if rc == 0 else "KO", "WSL 2 (moteur de Docker Desktop)", "actif" if rc == 0 else "absent",
+                 "" if rc == 0 else "PowerShell administrateur : wsl --install, puis redémarrer")
 
 
 def check_webcam() -> None:
+    os.environ.setdefault("OPENCV_LOG_LEVEL", "SILENT")      # pas de pavé d'avertissements si aucune caméra
     try:
         import cv2
     except ImportError:
-        return report("KO", "Webcam", "OpenCV absent", "tools\\setup-poste.ps1 -Role serveur")
+        return capacity("KO", "Webcam 0", "OpenCV absent", "relancer installer.cmd")
     cap = cv2.VideoCapture(0, cv2.CAP_DSHOW if os.name == "nt" else cv2.CAP_ANY)
     ok, frame = cap.read() if cap.isOpened() else (False, None)
     cap.release()
-    report("OK" if ok else "KO", "Webcam 0", f"{frame.shape[1]}x{frame.shape[0]}" if ok else "aucune image",
-           "" if ok else "brancher la webcam, fermer Teams/Zoom/Caméra qui l'occupent, ou VISION_SOURCE=1 dans infra/.env")
+    capacity("OK" if ok else "KO", "Webcam 0", f"{frame.shape[1]}x{frame.shape[0]}" if ok else "aucune image",
+             "" if ok else "brancher la webcam, fermer Teams/Zoom/Caméra qui l'occupent, ou VISION_SOURCE=1 dans infra/.env")
+
+
+def check_yolo_speed() -> None:
+    model = ROOT / "ai/vision/models/yolov8n.pt"
+    if not model.exists():
+        return capacity("KO", "Vitesse YOLO", "modèle absent, mesure impossible", "relancer installer.cmd")
+    try:
+        import time
+
+        import numpy as np
+        os.environ.setdefault("YOLO_OFFLINE", "1")
+        from ultralytics import YOLO
+    except ImportError:
+        return capacity("KO", "Vitesse YOLO", "ultralytics absent", "relancer installer.cmd")
+    yolo = YOLO(str(model))
+    frame = (np.random.default_rng(0).random((480, 640, 3)) * 255).astype("uint8")
+    for _ in range(3):
+        yolo.predict(frame, imgsz=320, classes=[0], verbose=False)
+    n, t0 = 15, time.perf_counter()
+    for _ in range(n):
+        yolo.predict(frame, imgsz=320, classes=[0], verbose=False)
+    fps = n / (time.perf_counter() - t0)
+    capacity(grade(fps, MIN_FPS, OK_FPS), "Vitesse YOLO (320 px)", f"{fps:.1f} images/s (minimum {MIN_FPS:.0f}, conseillé {OK_FPS:.0f})",
+             "" if fps >= MIN_FPS else "poste trop lent pour la vision : secteur + mode performances, ou un autre poste")
+
+
+def check_server_setup() -> None:
+    """Réglages faits une fois sur le poste choisi (serveur-pc.ps1, .env, comptes MQTT) : n'empêchent pas le choix."""
+    check_stack_files()
+    if os.name != "nt":
+        return
+    rc, out = powershell("(Get-NetFirewallRule -DisplayName 'Sentinel-X*' | ForEach-Object DisplayName) -join ', '")
+    setup("OK" if out.strip() else "!!", "Pare-feu (443, 8883)", out.strip() or "aucune règle Sentinel-X",
+          "" if out.strip() else "PowerShell administrateur : tools\\serveur-pc.ps1")
+    rc, out = powershell("(Get-NetIPAddress -IPAddress 192.168.137.1 -ErrorAction SilentlyContinue) -ne $null")
+    hot = out.strip().lower() == "true"
+    setup("OK" if hot else "!!", "Point d'accès (192.168.137.1)", "actif" if hot else "arrêté",
+          "" if hot else "tools\\serveur-pc.ps1 -Action PointAcces (ou Paramètres > Point d'accès mobile, 2,4 GHz)")
+    rc, out = powershell("(Get-ItemProperty 'HKLM:\\SYSTEM\\CurrentControlSet\\Services\\W32Time"
+                         "\\TimeProviders\\NtpServer').Enabled")
+    setup("OK" if out.strip() == "1" else "!!", "Serveur NTP pour l'ESP", "actif" if out.strip() == "1" else "inactif",
+          "" if out.strip() == "1" else "tools\\serveur-pc.ps1 -Action Ntp")
 
 
 # ----------------------------------------------------------------- serveur Linux / Raspberry Pi (portage)
@@ -282,11 +375,13 @@ def main() -> None:
     except AttributeError:
         pass
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--role", choices=["commun", "ia", "iot", "cyber", "integration", "fablab", "serveur"],
-                    default="commun")
+    ap.add_argument("--serveur", action="store_true",
+                    help="vérifie aussi que ce poste peut être le serveur (matériel, Docker, webcam, vitesse YOLO)")
     ap.add_argument("--linux", "--pi", dest="linux", action="store_true",
                     help="serveur Linux ou Raspberry Pi (stack et vision dans Docker)")
+    ap.add_argument("--role", help=argparse.SUPPRESS)       # ancienne option : --role serveur = --serveur
     a = ap.parse_args()
+    serveur = a.serveur or a.role == "serveur"
 
     check_git(pi=a.linux)
     if a.linux:
@@ -297,21 +392,21 @@ def main() -> None:
         check_gh()
         check_python()
         check_locked("requirements-dev.txt", "Dépendances Python")
+        check_project_deps()
         check_node()
-        check_docker(required=a.role in ("integration", "ia", "serveur"))
+        check_docker(required=serveur)
         check_mosquitto_clients()
-        check_vscode(a.role)
+        check_vscode()
         check_ssh_key()
-        check_role(a.role)
-        if a.role == "serveur":
-            check_stack_files()
-            if os.name == "nt":
-                check_windows_server()
-            else:
-                check_webcam()
+        if serveur:
+            check_hardware()
+            check_webcam()
+            check_yolo_speed()
+            check_server_setup()
 
     width = max(len(r[1]) for r in RESULTS)
-    print(f"\nSentinel-X · contrôle {'serveur Linux' if a.linux else 'poste'} · rôle {a.role}\n")
+    title = "serveur Linux" if a.linux else ("poste + capacité serveur" if serveur else "poste")
+    print(f"\nSentinel-X · contrôle {title}\n")
     for status, name, detail, fix in RESULTS:
         print(f"  [{status}] {name.ljust(width)}  {detail}")
         if fix and status != "OK":
@@ -319,6 +414,16 @@ def main() -> None:
     ko = sum(1 for r in RESULTS if r[0] == "KO")
     warn = sum(1 for r in RESULTS if r[0] == "!!")
     print(f"\n  {len(RESULTS) - ko - warn} OK · {warn} à surveiller · {ko} à corriger")
+    if serveur and not a.linux:
+        blocking = [r[1] for r in RESULTS if r[0] == "KO" and (r[1] in CAPACITY or r[1].startswith("Docker"))]
+        todo = [r[1] for r in RESULTS if r[0] != "OK" and r[1] in SETUP]
+        if blocking:
+            print("\n  VERDICT : ce poste NE PEUT PAS être le serveur (" + ", ".join(blocking) + ").")
+        else:
+            print("\n  VERDICT : ce poste PEUT être le serveur.")
+            if todo:
+                print("  Réglages à faire une fois s'il est choisi : " + ", ".join(t.strip() for t in todo)
+                      + " (tools\\serveur-pc.ps1 en administrateur, puis infra\\.env et comptes MQTT).")
     sys.exit(1 if ko else 0)
 
 

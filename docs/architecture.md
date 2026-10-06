@@ -16,7 +16,7 @@ physique, cyberattaque — en un score unique, avec une explication en langage c
 | Décision | Choix |
 | --- | --- |
 | Boîtier | ESP32-S3 N16R8 (2 cœurs, 8 Mo de PSRAM, crypto matérielle, capteurs tactiles intégrés) |
-| Serveur | PC portable Windows 11 : point d'accès Wi-Fi, Docker Desktop (broker, base, API, dashboard, Brain), vision sur la webcam |
+| Serveur | N'importe quel PC portable Windows de l'équipe qui passe `verifier-serveur.cmd` : point d'accès Wi-Fi, Docker Desktop (broker, base, API, dashboard, Brain), vision sur la webcam |
 | Secours | Un deuxième PC de l'équipe, même dépôt et même procédure, bascule en moins de 10 minutes ; vidéo de démonstration si la webcam lâche |
 | Communication | MQTT : 1883 authentifié pour le socle, TLS 8883 ensuite, TLS mutuel (certificat par équipement) en cible |
 | Détection capteurs | 4 couches : qualité des données, par capteur (CUSUM décorrélé + vitesse de montée), multivariée (Isolation Forest), prévision (Holt) |
@@ -160,8 +160,11 @@ vision passe dans un conteneur (`docker-compose.linux.yml`).
 
 ### Mise en place
 
-1. PC serveur : `tools\setup-poste.ps1 -Role serveur` (Docker Desktop, WSL 2, vision, modèle YOLO).
-2. `tools\serveur-pc.ps1` en administrateur : pare-feu, NTP, point d'accès ; `tools\doctor.py --role serveur`.
+1. Choisir le serveur : **n'importe quel poste de l'équipe** qui passe `verifier-serveur.cmd` (mémoire ≥ 8 Go, 4 cœurs,
+   15 Go libres, carte Wi-Fi, WSL 2 et Docker, webcam, YOLO ≥ 5 images/s). `installer.cmd` a déjà tout installé.
+2. `tools\serveur-pc.ps1` en administrateur : pare-feu, NTP, point d'accès ; puis `python tools\doctor.py --serveur`.
+   Le point d'accès donne toujours 192.168.137.1 au serveur : certificats et `secrets.h` restent valables quel que soit
+   le poste choisi.
 3. `infra\.env` depuis `.env.example`, comptes Mosquitto (`infra/mosquitto/README.md`).
 4. Socle (Mosquitto + PostgreSQL, 1883), puis TLS (`MOSQUITTO_CONF=mosquitto.tls.conf`), puis profils `app` et `ai`.
 5. Tout démarrer : `tools\demarrer.ps1` (stack + vision). Arrêter : `tools\demarrer.ps1 -Arreter`.
