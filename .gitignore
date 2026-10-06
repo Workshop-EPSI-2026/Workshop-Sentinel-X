@@ -40,3 +40,6 @@ venv/
 Thumbs.db
 *.log
 .idea/
+
+# ---- Jeux de données simulés (reproductibles avec --seed)
+ai/anomaly/data/simu*.csv

@@ -17,6 +17,7 @@ jobs:
   secrets:
     name: Aucun secret dans le dépôt (gitleaks)
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
         with:
@@ -29,6 +30,7 @@ jobs:
   compose:
     name: docker-compose valide
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - name: Vérifier la composition (tous profils)
@@ -49,20 +51,24 @@ jobs:
           done
 
   python:
-    name: Python (lint)
+    name: Python (lint et verrous)
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
-      - run: pip install ruff
-      - name: ruff (erreurs bloquantes uniquement)
-        run: ruff check --select E9,F63,F7,F82 api ai tools
+          python-version-file: .python-version
+      - run: pip install "ruff==0.16.3" "uv==0.11.7"
+      - name: ruff (règles communes de ruff.toml)
+        run: ruff check api ai tools
+      - name: Verrous de dépendances à jour
+        run: python tools/lock_deps.py --check
 
   firmware:
     name: Firmware ESP32-S3 (compilation)
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - id: check
@@ -70,7 +76,7 @@ jobs:
       - if: steps.check.outputs.present == 'true'
         uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version-file: .python-version
       - if: steps.check.outputs.present == 'true'
         name: Compiler
         run: |
@@ -84,6 +90,7 @@ jobs:
   dashboard:
     name: Dashboard (build)
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - id: check
@@ -91,7 +98,7 @@ jobs:
       - if: steps.check.outputs.present == 'true'
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version-file: .nvmrc
       - if: steps.check.outputs.present == 'true'
         working-directory: dashboard
         run: |

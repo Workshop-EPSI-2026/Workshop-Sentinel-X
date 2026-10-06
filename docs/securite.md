@@ -14,6 +14,9 @@
 ## Volontairement non activé
 Démarrage sécurisé et chiffrement de la flash de l'ESP32-S3 : fusibles irréversibles. Présentés comme étape d'industrialisation.
 
+## Outils d'audit
+Nmap (reconnaissance et scan de ports), Wireshark (preuve du chiffrement), Metasploit (au moins une tentative documentée : module auxiliaire ou vérification de service exposé). Uniquement dans le cadre et le périmètre fixés par les coachs.
+
 ## Règles d'engagement du pentest
 Réponse des coachs du 06/10/2026 : **attaques Wi-Fi et DoS autorisées** (docs/coachs.md).
 

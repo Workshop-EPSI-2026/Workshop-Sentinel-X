@@ -16,7 +16,126 @@
 
 Répartition détaillée, binômes et charge : [`docs/repartition.md`](docs/repartition.md).
 
+## Installer le même environnement sur tous les postes
+
+Tout le monde part du même dépôt et obtient les mêmes versions. Deux chemins : automatique (poste neuf) ou
+manuel (si Python, Git et VS Code sont déjà là). Le registre des versions est [`VERSIONS.md`](VERSIONS.md) ;
+la vérification d'un poste est `python tools/doctor.py`.
+
+### 0. Prérequis une seule fois : cloner
+
+```powershell
+git clone https://github.com/Workshop-EPSI-2026/Workshop-Sentinel-X.git
+cd Workshop-Sentinel-X
+```
+
+### Chemin A — installation automatique (recommandé)
+
+Une commande installe les logiciels (winget), Node.js, les extensions VS Code, règle Git, crée la clé SSH
+et l'environnement Python aux versions exactes, puis contrôle le poste. Remplacer `<rôle>` par le vôtre :
+`ia` (Jeffrick), `iot` (Momo, Michel), `cyber` (Lisa), `integration` (Constantin), `fablab` (Michel).
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools\setup-poste.ps1 -Role <rôle>
+```
+
+Fermer puis rouvrir PowerShell si le script le demande (après l'installation de Node ou de VS Code), et le
+relancer : il reprend là où il en était. À la fin, il affiche le contrôle du poste.
+
+### Chemin B — installation manuelle
+
+1. Installer les logiciels de base (si absents) :
+
+```powershell
+winget install --id Git.Git -e
+winget install --id GitHub.cli -e
+winget install --id Microsoft.VisualStudioCode -e
+winget install --id Python.Python.3.12 -e
+winget install --id CoreyButler.NVMforWindows -e
+winget install --id Docker.DockerDesktop -e
+```
+
+   Fermer et rouvrir PowerShell, puis Node à la version du dépôt :
+
+```powershell
+nvm install 22
+nvm use 22
+```
+
+   Clients Mosquitto : installateur Windows 64 bits depuis https://mosquitto.org/download/, puis ajouter
+   `C:\Program Files\mosquitto` au `Path`.
+
+2. Régler Git, créer la clé SSH :
+
+```powershell
+git config --global core.autocrlf false
+git config --global init.defaultBranch main
+git config --global user.name "Prénom Nom"
+git config --global user.email "adresse-du-compte-github"
+ssh-keygen -t ed25519 -C "prenom@sentinel"
+```
+
+3. Créer l'environnement Python aux versions exactes :
+
+```powershell
+py -3.12 -m venv .venv
+.venv\Scripts\activate
+python -m pip install --upgrade pip
+pip install -r requirements-dev.txt
+```
+
+4. Outils du rôle en plus :
+
+| Rôle | Commandes supplémentaires |
+|---|---|
+| `ia` | `pip install -r ai\vision\torch-cpu.txt --index-url https://download.pytorch.org/whl/cpu` puis `pip install -r ai\vision\requirements.txt` |
+| `iot` | Extension PlatformIO : `code --install-extension platformio.platformio-ide` |
+| `cyber` | `winget install --id Insecure.Nmap -e` et `winget install --id WiresharkFoundation.Wireshark -e` ; Metasploit s'installe sur la station d'audit (laptop de l'équipe, par exemple dans WSL : `sudo apt install metasploit-framework`) |
+| `integration` | `winget install --id OBSProject.OBSStudio -e` |
+
+### Contrôler son poste
+
+```powershell
+python tools\doctor.py --role <rôle>
+```
+
+Objectif : aucune ligne `[KO]`. Chaque ligne en défaut indique la commande de correction. `[!!]` signale un
+point à surveiller sans gravité.
+
+### Chaque jour
+
+```powershell
+cd Workshop-Sentinel-X
+.venv\Scripts\activate
+git switch main
+git pull
+```
+
+Si `git pull` a modifié un fichier `requirements*.txt` : `pip install -r requirements-dev.txt`.
+
+### Sur le PC serveur
+
+Les services tournent dans Docker Desktop, aux versions figées (seule la vision a besoin du `.venv`). Après le clone :
+
+```powershell
+cd infra; docker compose build; docker compose up -d
+```
+
+### Ajouter une bibliothèque Python
+
+Ne jamais modifier un `requirements.txt` à la main (il est généré). Modifier le `requirements.in` concerné, puis :
+
+```powershell
+pip install "uv==0.11.7"
+python tools\lock_deps.py
+pip install -r requirements-dev.txt
+```
+
+Commiter les `.in` et les `.txt` ensemble, par Pull Request. La CI refuse un `.in` modifié sans régénération.
+
 ## Architecture v2
+
+
 
 Référence complète : [`docs/architecture.md`](docs/architecture.md).
 

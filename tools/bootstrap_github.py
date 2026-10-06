@@ -18,7 +18,11 @@ Usage (depuis la racine du dépôt) :
                                                        # nouvelles tâches et les ajoute au Kanban
 Options : --owner <compte ou organisation>  --name <nom du dépôt>  --public  --no-project
 """
-import argparse, json, pathlib, subprocess, sys
+import argparse
+import json
+import pathlib
+import subprocess
+import sys
 
 try:
     import yaml
@@ -129,9 +133,9 @@ def main():
 
     # 5. Labels ------------------------------------------------------------
     step("Labels")
-    for l in plan["labels"]:
-        run(["gh", "label", "create", l["nom"], "-R", repo, "--color", l["couleur"],
-             "--description", l["description"], "--force"], check=False)
+    for lab in plan["labels"]:
+        run(["gh", "label", "create", lab["nom"], "-R", repo, "--color", lab["couleur"],
+             "--description", lab["description"], "--force"], check=False)
     print(f"  {len(plan['labels'])} labels")
 
     # 6. Jalons (un par jour) ---------------------------------------------
@@ -155,8 +159,8 @@ def main():
         title = f"[{t['id']}] {t['titre']}"
         base = ["gh", "issue", "create", "-R", repo, "--title", title, "--body", body(t),
                 "--milestone", t["jour"]]
-        for l in t["labels"]:
-            base += ["--label", l]
+        for lab in t["labels"]:
+            base += ["--label", lab]
         who = [handles[p] for p in t["assignes"]]
         url = run(base + ["--assignee", ",".join(who)], check=False, quiet=True)
         if url is None and not DRY:
@@ -228,9 +232,9 @@ def assign_existing(repo, plan, handles):
 
 def sync(repo, owner, plan, handles, with_project):
     step("Labels et jalons")
-    for l in plan["labels"]:
-        run(["gh", "label", "create", l["nom"], "-R", repo, "--color", l["couleur"],
-             "--description", l["description"], "--force"], check=False)
+    for lab in plan["labels"]:
+        run(["gh", "label", "create", lab["nom"], "-R", repo, "--color", lab["couleur"],
+             "--description", lab["description"], "--force"], check=False)
     have = set((run(["gh", "api", f"repos/{repo}/milestones?state=all", "--jq", ".[].title"],
                     check=False, quiet=True) or "").splitlines())
     for j in plan["jalons"]:
@@ -245,15 +249,15 @@ def sync(repo, owner, plan, handles, with_project):
         if t["id"] in existing:
             cmd = ["gh", "issue", "edit", str(existing[t["id"]]["number"]), "-R", repo,
                    "--title", title, "--body", body(t), "--milestone", t["jour"]]
-            for l in t["labels"]:
-                cmd += ["--add-label", l]
+            for lab in t["labels"]:
+                cmd += ["--add-label", lab]
             r = run(cmd, check=False)
             print(f"  mis à jour  {title}" + ("" if r is not None or DRY else "  (échec)"))
         else:
             base = ["gh", "issue", "create", "-R", repo, "--title", title, "--body", body(t),
                     "--milestone", t["jour"]]
-            for l in t["labels"]:
-                base += ["--label", l]
+            for lab in t["labels"]:
+                base += ["--label", lab]
             url = run(base + ["--assignee", ",".join(handles[p] for p in t["assignes"])], check=False, quiet=True)
             if url is None and not DRY:
                 url = run(base, check=False)

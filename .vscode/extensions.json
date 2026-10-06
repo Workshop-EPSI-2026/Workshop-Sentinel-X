@@ -1,0 +1,12 @@
+{
+  "recommendations": [
+    "ms-python.python",
+    "ms-toolsai.jupyter",
+    "charliermarsh.ruff",
+    "ms-azuretools.vscode-docker",
+    "dbaeumer.vscode-eslint",
+    "platformio.platformio-ide",
+    "redhat.vscode-yaml",
+    "editorconfig.editorconfig"
+  ]
+}

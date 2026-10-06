@@ -6,8 +6,10 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 RUN apt-get update && apt-get install -y --no-install-recommends libgl1 libglib2.0-0 \
  && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
-COPY requirements.txt .
-RUN pip install -r requirements.txt
+COPY torch-cpu.txt requirements.txt ./
+# PyTorch en version CPU (pas de paquets NVIDIA sur le Pi), versions figées dans torch-cpu.txt
+RUN pip install -r torch-cpu.txt --index-url https://download.pytorch.org/whl/cpu \
+ && pip install -r requirements.txt
 COPY . .
 # Utilisateur non root
 RUN useradd --uid 10001 --no-create-home --shell /usr/sbin/nologin app
