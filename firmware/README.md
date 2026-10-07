@@ -19,7 +19,7 @@ monitor_speed = 115200
 lib_deps =
   adafruit/DHT sensor library
   adafruit/Adafruit Unified Sensor
-  adafruit/Adafruit SSD1306
+  arduino-libraries/LiquidCrystal
   adafruit/Adafruit NeoPixel
   knolleary/PubSubClient
   bblanchon/ArduinoJson
@@ -36,6 +36,9 @@ La CI compile le firmware dès que `firmware/platformio.ini` existe : ne le comm
 | Réseau | 0 | Wi-Fi, heure NTP du PC, MQTT TLS (`WiFiClientSecure` + `setCACert`, puis certificat client), tampon PSRAM rejoué, dernière volonté |
 | Santé | 0 | Message `health` toutes les 30 s |
 
+Écran LCD 1602 (2 × 16 caractères), rafraîchi par la tâche Santé, sans bloquer les capteurs :
+ligne 1 = mesures (`T22C H45% G1.02`), ligne 2 = mode, alarme et sa cause, ou `HORS LIGNE` quand le tampon est actif.
+
 Modes : `learning` (10 min), `armed`, `maintenance`. La configuration `sentinel/<id>/config` est enregistrée en NVS.
 Voyant RGB : vert surveillance, bleu apprentissage, orange suspicion, rouge alarme, violet hors ligne, blanc maintenance.
 
@@ -50,7 +53,9 @@ Pour l'équipe qui travaille dans l'Arduino IDE : `sentinel_esp/sentinel_esp.ino
 4. Vérifier les broches en tête du sketch (mêmes valeurs que `include/pins.h`).
 5. Téléverser, moniteur série à 115200 : « Wi-Fi OK », « Heure OK », « MQTT OK », puis une ligne `->` par message.
 
-Passage en TLS (mo2) : `MQTT_PORT 8883`, `MQTT_USE_TLS 1` et un `certs.h` (CA de Lisa) dans le même dossier.
+Passage en TLS (mo2) : `MQTT_PORT 8883`, `MQTT_USE_TLS 1`. Le `certs.h` du même dossier (CA, certificat et clé d'`esp-01`)
+est créé sur le PC serveur par `python tools\configurer.py` (ou `python security\pki\pki.py`) ; il n'est jamais commité.
+TLS mutuel (li7) : en plus, `MQTT_USE_MTLS 1`.
 La garde locale, le tampon PSRAM, l'effraction et les commandes viennent avec mo1, dans ce même sketch.
 
 ## Secrets

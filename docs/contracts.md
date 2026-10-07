@@ -32,7 +32,7 @@ Le même contrat vaut sur un serveur Linux ou un Raspberry Pi : seule l'adresse 
 | `sentinel/<id>/config` | API | Boîtier | 1 | oui | Partie « boîtier » du profil de site |
 | `sentinel/site/config` | API | Brain, vision | 1 | oui | Profil de site complet (JSON) |
 | `sentinel/brain/score` | Brain, à chaque mesure et chaque message vision | API | 0 | non | Scores en direct |
-| `sentinel/brain/alert` | Brain, à chaque alerte | API | 1 | non | Copie MQTT de l'alerte (secours si `POST /alerts` échoue) |
+| `sentinel/brain/alert` | Brain, à chaque alerte | Notifications (`ai/notify`) | 1 | non | Copie MQTT de l'alerte : annonce vocale et mail |
 
 ## Télémétrie
 
@@ -107,8 +107,8 @@ plus vieille que 30 s ou dont l'`id` a déjà été vu.
 
 | Type | Domaine | Gravité usuelle | Quand |
 | --- | --- | --- | --- |
-| `intrusion_confirmed` | physical | critical | Personne sans badge dans la zone **et** PIR à moins de 5 s |
-| `intrusion_suspected` | physical | warning | Vision seule, PIR seul (caméra aveugle), ou personne non badgée accompagnée d'un agent |
+| `intrusion_confirmed` | physical | critical | Personne sans badge dans la zone **et** PIR à moins de 5 s, ou seule dans la zone depuis `vision_confirm_s` (3 s) |
+| `intrusion_suspected` | physical | warning | Vision seule pendant les `vision_confirm_s` premières secondes, PIR seul (caméra aveugle), ou personne non badgée accompagnée d'un agent |
 | `loitering` | physical | warning | Personne sans badge dans la zone depuis plus de `loitering_s` |
 | `presence_authorized` | physical | info | Agent badgé dans la zone, dans ses horaires |
 | `presence_to_verify` | physical | warning | Badge connu mais hors de ses horaires |
@@ -123,7 +123,7 @@ plus vieille que 30 s ou dont l'`id` a déjà été vu.
 | `camera_degraded` | maintenance | info / warning | Image trop sombre, ou caméra hors ligne sans détection récente |
 
 Brain envoie une alerte à l'ouverture d'un incident puis seulement quand sa gravité monte. L'API regroupe les
-répétitions : un seul incident non résolu par (`device_id`, `type`) (`infra/postgres/init/01-schema.sql`).
+répétitions : un seul incident non résolu par (`device_id`, `type`) (index unique de la table `alerts`, `api/app/db.py`).
 
 ## Score en direct (`sentinel/brain/score`)
 
@@ -150,10 +150,45 @@ publie des scores mais aucune alerte.
 | POST | `/api/v1/commands` | Commande vers un boîtier | Opérateur |
 | GET / PUT | `/api/v1/config` | Profil de site | Opérateur |
 | GET | `/api/v1/score` | Scores courants | Opérateur |
-| GET | `/api/v1/health` | Santé du système | Libre (supervision) |
+| GET | `/api/v1/health` | Santé du système | Libre : `{"status": "ok"}` seulement ; détail avec le jeton opérateur |
 | WS | `/ws` | Temps réel | Opérateur |
 | GET | `/video` | Flux MJPEG annoté (relayé par nginx vers la vision du PC) | Opérateur |
 | GET | `/vision/health` | Santé de la vision | Libre |
+
+## Formats attendus par le dashboard
+
+Implémentés par l'API (`api/app/`, testés de bout en bout) et attendus par le dashboard (`dashboard/src/types.ts`).
+Le mode démo du dashboard simule exactement ces formats.
+
+**Authentification opérateur** : en-tête `Authorization: Bearer <OPERATOR_TOKEN>` ; réponse 401 si le jeton est refusé.
+Les services (vision, Brain) s'authentifient sur `POST /api/v1/alerts` par l'en-tête `X-API-Key: <API_KEY>`.
+Exception : `/video?token=<OPERATOR_TOKEN>`, car une balise `<img>` ne peut pas envoyer d'en-tête (c'est le service
+vision qui doit vérifier ce jeton : l'API n'est pas sur ce chemin).
+
+**WebSocket `/ws`** : le client envoie d'abord `{"type": "auth", "token": "…"}` (jamais de jeton dans l'URL, qui
+finirait dans les journaux nginx). L'API répond `{"type": "ready"}`, ou ferme avec le code 4401. Elle pousse ensuite
+`{"type": <type>, "data": {…}}` :
+
+| `type` | `data` |
+| --- | --- |
+| `telemetry`, `event`, `health`, `status` | Message MQTT du boîtier, tel quel |
+| `score` | `{ts, global, environment, physical, cyber}` (contenu de `sentinel/brain/score`, scores 0 à 100) |
+| `alert` | Incident complet, à chaque création ou mise à jour |
+
+**Incident** (réponse de `GET /api/v1/alerts`, élément de liste) : les champs de l'alerte ci-dessus, plus `id` (entier),
+`status` (`open`, `acknowledged`, `resolved`) et `count` (répétitions regroupées).
+
+| Route | Corps envoyé | Réponse |
+| --- | --- | --- |
+| `POST /api/v1/alerts` | Alerte du contrat (clé d'API) | 201 avec l'incident ; regroupé avec l'incident non résolu du même type sur le même boîtier (`count` + 1, gravité jamais abaissée) |
+| `GET /api/v1/alerts?status=&domain=` | — | Liste d'incidents, du plus récent au plus ancien |
+| `PATCH /api/v1/alerts/{id}` | `{"status": "acknowledged"}` ou `"resolved"` | Incident mis à jour |
+| `GET /api/v1/telemetry?device=&from=` | — | `{"items": [télémétrie…], "next": <from suivant> ou null}`, trié par `ts` croissant |
+| `POST /api/v1/commands` | `{"device_id": "esp-01", "cmd": "alarm", "on": true}` (champs de la commande : `on` pour `alarm`, `color` pour `led`, `value` pour `mode`) | 202 avec la commande publiée, `id` et `ts` ajoutés par l'API ; 503 si le broker est injoignable |
+| `GET /api/v1/config` | — | `{"version", "updated_at", "profile"}` ; `profile` = profil de site en JSON (structure de `config/site.example.yml`) |
+| `PUT /api/v1/config` | `{"profile": {…}}` | Même réponse que `GET`, version incrémentée |
+| `GET /api/v1/score` | — | Dernier score, ou `null` |
+| `GET /api/v1/health` (jeton opérateur) | — | `{"ts", "server": {"cpu_pct", "mem_pct", "uptime_s"}, "services": [{"name", "ok", "detail"}], "vision": {"fps", "latency_ms"} ou null, "devices": [santé…]}` |
 
 ## Points ouverts (docs/coachs.md)
 - Format imposé de `POST /api/v1/alerts` par les coachs : à confirmer. Si imposé, ce contrat s'y aligne.

@@ -65,4 +65,4 @@ python tools/simulator.py --no-mqtt --scenario all --cooldown 600 --speed 100000
 ```
 
 **À refaire sur données réelles** : la section 3 du notebook (calibration) avec quelques heures exportées de la base
-(`v_training_telemetry`, voir `infra/postgres/init/README.md`), puis reporter les valeurs dans `CALIBRATION`.
+(table `telemetry`, commande d'export dans `infra/postgres/init/README.md`), puis reporter les valeurs dans `CALIBRATION`.

@@ -24,9 +24,13 @@ def in_polygon(x: float, y: float, poly: tuple[tuple[float, float], ...]) -> boo
 
 
 def foot_point(box: tuple[float, float, float, float]) -> tuple[float, float]:
-    """Milieu du bas de la boîte : là où la personne touche le sol (plus juste que le centre)."""
-    x1, _, x2, y2 = box
-    return (x1 + x2) / 2, y2 - 0.02 * (y2 - box[1])
+    """Milieu du bas de la boîte : là où la personne touche le sol (plus juste que le centre). Personne coupée par
+    le bas de l'image (tout près de la caméra, pieds hors champ, typique d'une webcam de PC) : le centre de la boîte,
+    sinon elle serait toujours vue « sous » la zone et jamais comme intruse."""
+    x1, y1, x2, y2 = box
+    if y2 >= 0.97:
+        return (x1 + x2) / 2, (y1 + y2) / 2
+    return (x1 + x2) / 2, y2 - 0.02 * (y2 - y1)
 
 
 # ------------------------------------------------------------------ intégrité de la caméra
@@ -37,20 +41,30 @@ class Integrity:
     sharpness: float
     masked: bool
     low_light: bool
+    edges: float = 0.0          # part des pixels de contour (0..1) : une scène éclairée en a toujours
+
+    def as_dict(self) -> dict:
+        return {"brightness": round(self.brightness, 1), "contrast": round(self.contrast, 1),
+                "sharpness": round(self.sharpness, 1), "edges": round(self.edges, 4), "masked": self.masked,
+                "low_light": self.low_light}
 
 
 def check_integrity(gray: np.ndarray, low_light_threshold: float = 35.0) -> Integrity:
     """Caméra masquée = image presque uniforme (main, papier, cache) ou totalement noire (scotch) ;
     faible luminosité = image sombre mais qui garde ses contrastes relatifs (une pièce dans le noir).
     On compare l'écart-type à la luminosité moyenne (coefficient de variation) : assombrir une scène
-    garde ce rapport, la masquer l'écrase. Calculé sur une image réduite : moins de 1 ms."""
+    garde ce rapport, la masquer l'écrase. Un doigt devant l'objectif d'une webcam laisse passer une lueur et un
+    dégradé (contraste non nul) mais aucun contour : une image éclairée sans aucun contour est donc masquée aussi.
+    Calculé sur une image réduite : environ 1 ms."""
     small = cv2.resize(gray, (160, 120), interpolation=cv2.INTER_AREA)
     brightness = float(small.mean())
     contrast = float(small.std())
     sharpness = float(cv2.Laplacian(small, cv2.CV_64F).var())
+    edges = float(np.count_nonzero(cv2.Canny(cv2.GaussianBlur(small, (3, 3), 0), 40, 100))) / small.size
     variation = contrast / max(brightness, 1.0)
-    masked = brightness < 8.0 or (variation < 0.10 and contrast < 10.0)
-    return Integrity(brightness, contrast, sharpness, masked, (not masked) and brightness < low_light_threshold)
+    masked = (brightness < 8.0 or (variation < 0.10 and contrast < 10.0)
+              or (brightness >= low_light_threshold and edges < 0.003))
+    return Integrity(brightness, contrast, sharpness, masked, (not masked) and brightness < low_light_threshold, edges)
 
 
 class Persistence:

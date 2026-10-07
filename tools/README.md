@@ -3,6 +3,8 @@
 | Fichier | Rôle | Responsable |
 |---|---|---|
 | `setup-poste.ps1` | Installe **tout** le projet sur un poste Windows, le même pour tous (lancé par `installer.cmd` à la racine) | Tous |
+| `demo_brain.py` | Démonstration de Sentinel Brain hors ligne sur le simulateur (lancée par `demo.cmd`) | Tous |
+| `configurer.py` | Crée `infra/.env` (secrets aléatoires) et les comptes MQTT `infra/mosquitto/passwd`, sans Docker | Poste serveur |
 | `doctor.py` | Contrôle un poste ; `--serveur` (ou `verifier-serveur.cmd`) dit s'il peut être le serveur ; `--linux` pour Linux / Raspberry Pi | Tous |
 | `serveur-pc.ps1` | PC serveur, en administrateur : pare-feu (443, 8883), NTP pour l'ESP, point d'accès Wi-Fi 2,4 GHz, vérification | Michel, Lisa |
 | `demarrer.ps1` | PC serveur : démarre Docker Desktop, la stack et la vision ; `-Arreter` arrête tout | Tous |

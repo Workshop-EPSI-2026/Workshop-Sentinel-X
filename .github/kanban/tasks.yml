@@ -291,10 +291,10 @@ taches:
   - POST /api/v1/alerts avec validation stricte du contrat v3 (pydantic), GET /api/v1/health.
   - Client MQTT abonné à sentinel/+/telemetry, event, health, status, vision et sentinel/brain/# ; diffusion WebSocket vers
     le front.
-  - Insertion idempotente (ON CONFLICT sur device_id, boot_id, seq) dans le schéma fourni (infra/postgres/init/01-schema.sql).
+  - Insertion idempotente (ON CONFLICT sur device_id, boot_id, seq) ; schéma créé par l'API (migrations de api/app/db.py).
   - Tester avec le simulateur et la vidéo de démonstration de la vision.
   fini_quand: Une donnée simulée publiée sur MQTT arrive en WebSocket.
-  fait: false
+  fait: true
 - id: c3
   titre: Passation MQTT serveur à Lisa
   jour: Lundi
@@ -560,13 +560,13 @@ taches:
   - api
   - bloquant
   detail:
-  - 'Schéma livré par Jeffrick : infra/postgres/init/01-schema.sql (telemetry, events, health, device_status, vision_events,
-    brain_scores, alerts avec cycle de vie, commands, config_versions, audit_log, vues).'
+  - 'Schéma créé par l’API (migrations de api/app/db.py) : telemetry, events, device_health, scores, alerts avec cycle de vie,
+    commands, config_versions, audit_log.'
   - Écriture par l’API (insertion idempotente, regroupement des alertes), GET historique paginé, enregistrement continu pour
     l’entraînement.
-  - 'Export d’entraînement : vue v_training_telemetry (infra/postgres/init/README.md).'
+  - 'Export d’entraînement : table telemetry (requête dans infra/postgres/init/README.md).'
   fini_quand: Les données de la journée sont en BDD et relisibles.
-  fait: false
+  fait: true
 - id: c6
   titre: Dashboard v1
   jour: Mardi
@@ -586,7 +586,7 @@ taches:
   - 'Incidents : explication, facteurs, prévision, acquitter / résoudre. Commandes : alarme, LED, mode, recalibrage.'
   - Emplacement du flux /video. Grosses polices et contrastes forts pour la démo et Teams.
   fini_quand: Une commande depuis le dashboard fait sonner le buzzer.
-  fait: false
+  fait: true
 - id: p2
   titre: Budget de ressources du PC serveur
   jour: Mardi
@@ -1034,7 +1034,27 @@ taches:
   - Publication conservée sur sentinel/<id>/config et sentinel/site/config ; application à chaud par le boîtier et Brain.
   - 'Page Réglages : sensibilités, seuils, modes et horaires, zone de la caméra.'
   fini_quand: Une sensibilité modifiée dans la page Réglages change le comportement sans redémarrage.
-  fait: false
+  fait: true
+- id: je7
+  titre: Notifications vocales et mails (intrus, caméra masquée / rétablie)
+  jour: Mercredi
+  creneau: Mercredi matin
+  duree: 2 h
+  bloquant: false
+  brique: ai
+  assignes:
+  - Jeffrick
+  tous: false
+  pilote: Jeffrick
+  labels:
+  - ia
+  detail:
+  - 'Service ai/notify sur le PC serveur : annonce vocale hors ligne (« Intrus détecté », « Caméra masquée », « Caméra rétablie »).'
+  - Mail aux propriétaires avec la photo du moment, la date et l'heure ; dernière image avant un masquage ; durée du masquage.
+  - Réglages dans la section notifications du profil (page Réglages) et SMTP_* / NOTIFY_TO dans infra/.env.
+  fini_quand: 'Un intrus devant la webcam déclenche l''annonce vocale et un mail avec sa photo ; masquer puis démasquer la caméra
+    produit deux notifications.'
+  fait: true
 - id: p4
   titre: Répétition de bascule sur le PC de secours
   jour: Mercredi

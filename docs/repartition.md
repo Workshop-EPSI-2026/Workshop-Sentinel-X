@@ -25,8 +25,8 @@ Généré par `python tools/repartition.py` depuis `.github/kanban/tasks.yml` ; 
 
 | Membre | Tâches | dont bloquantes | faites | Tâches collectives |
 |---|---|---|---|---|
-| Constantin | 18 | 9 | 0 | 12 |
-| Jeffrick | 12 | 7 | 2 | 12 |
+| Constantin | 18 | 9 | 4 | 12 |
+| Jeffrick | 13 | 7 | 5 | 12 |
 | Momo | 8 | 5 | 0 | 12 |
 | Lisa | 12 | 6 | 0 | 12 |
 | Michel | 11 | 6 | 0 | 12 |
@@ -57,16 +57,16 @@ Généré par `python tools/repartition.py` depuis `.github/kanban/tasks.yml` ; 
 | g7 | Dépôt Git, Kanban et conventions | Lundi 11h15 – 12h30 | 15 min | — |  | Tout le monde a cloné et fait un premier commit. |
 | p1 | Choisir le poste serveur (verifier-serveur.cmd) et le préparer | Lundi 13h30 – 17h30 | 1 h | Michel | **oui** | verifier-serveur.cmd sans [KO] sur les deux PC, docker run hello-world passe, la webcam donne une image. |
 | c1 | Stack Docker minimale sur le PC serveur | Lundi 13h30 – 17h30 | 1 h 30 | — | **oui** | mosquitto_pub/sub fonctionne avec identifiants depuis un autre poste connecté au point d’accès du PC. |
-| c2 | API squelette | Lundi 13h30 – 17h30 | 2 h | — | **oui** | Une donnée simulée publiée sur MQTT arrive en WebSocket. |
+| c2 | API squelette ✅ | Lundi 13h30 – 17h30 | 2 h | — | **oui** | Une donnée simulée publiée sur MQTT arrive en WebSocket. |
 | c3 | Passation MQTT serveur à Lisa | Lundi 13h30 – 17h30 | 45 min | — |  | Lisa sait lancer et lire un abonnement MQTT seule. |
 | c4 | Mosquitto en TLS (8883 boîtiers, 8884 services) avec ACL | Mardi | 2 h | Lisa | **oui** | mosquitto_sub en 8883 avec CA fonctionne, un client anonyme est refusé. |
-| c5 | Persistance et historique | Mardi | 2 h | Jeffrick | **oui** | Les données de la journée sont en BDD et relisibles. |
-| c6 | Dashboard v1 | Mardi | 3 h | — | **oui** | Une commande depuis le dashboard fait sonner le buzzer. |
+| c5 | Persistance et historique ✅ | Mardi | 2 h | Jeffrick | **oui** | Les données de la journée sont en BDD et relisibles. |
+| c6 | Dashboard v1 ✅ | Mardi | 3 h | — | **oui** | Une commande depuis le dashboard fait sonner le buzzer. |
 | p2 | Budget de ressources du PC serveur | Mardi | 45 min | Jeffrick |  | Stack complète plus vision stables 30 min, processeur sous 70 %, YOLO sous 100 ms par image. |
 | li2 | Sécurité de l’API | Mardi | 1 h | Lisa |  | Les deux tests passent. |
 | mi4 | Logo, numéro de série et storyboard | Mardi | 1 h 30 | Michel |  | Storyboard et fichiers de gravure dans docs/. |
 | g11 | Captures pour la vidéo | Mercredi matin | 30 min | — |  | Clips dans le dossier partagé. |
-| je6 | Profil de site et page Réglages | Mercredi matin | 2 h | Jeffrick |  | Une sensibilité modifiée dans la page Réglages change le comportement sans redémarrage. |
+| je6 | Profil de site et page Réglages ✅ | Mercredi matin | 2 h | Jeffrick |  | Une sensibilité modifiée dans la page Réglages change le comportement sans redémarrage. |
 | p4 | Répétition de bascule sur le PC de secours | Mercredi après-midi et soir | 45 min | Michel |  | Bascule réalisée en moins de 10 minutes, sans perte de mesure. |
 | li5 | Pentest croisé et rapport d’audit | Jeudi | après-midi | Lisa | **oui** | Rapport intégré au dossier. |
 | je4 | Présentation et pitch | Jeudi | 3 h | Jeffrick | **oui** | Workshop2026-M1-G<n>-Pres.pptx prêt, répété une fois. |
@@ -79,13 +79,14 @@ Généré par `python tools/repartition.py` depuis `.github/kanban/tasks.yml` ; 
 | j1 | Simulateur d’ESP ✅ | Lundi 13h30 – 17h30 | 45 min | — | **oui** | Constantin reçoit les données simulées dans l’API. |
 | j2 | Mesures YOLO sur le PC serveur | Lundi 13h30 – 17h30 | 1 h 30 | Momo | **oui** | Configuration retenue (format, taille) avec moins de 100 ms par image, tableau commité. |
 | j3 | Prototype de Sentinel Brain (4 couches) ✅ | Lundi 13h30 – 17h30 | 1 h 30 | — |  | Sur les scénarios simulés, le score monte et eta_min est calculé avant tout seuil brut. |
-| c5 | Persistance et historique | Mardi | 2 h | Constantin | **oui** | Les données de la journée sont en BDD et relisibles. |
+| c5 | Persistance et historique ✅ | Mardi | 2 h | Constantin | **oui** | Les données de la journée sont en BDD et relisibles. |
 | p2 | Budget de ressources du PC serveur | Mardi | 45 min | Constantin |  | Stack complète plus vision stables 30 min, processeur sous 70 %, YOLO sous 100 ms par image. |
 | je1 | Vision v1 : suivi, zone et intégrité de la caméra | Mardi | 3 h | — | **oui** | Une personne entre dans la zone : alerte au dashboard ; caméra masquée : alerte sabotage ; agent badgé : présence autorisée. |
 | je2 | Collecte et provocation d’anomalies réelles | Mardi | 1 h | — |  | Jeu de données réel étiqueté exporté en CSV. |
 | je3 | Sentinel Brain en production | Mercredi matin | 2 h | — | **oui** | Sur un scénario provoqué, l’incident arrive expliqué avec une prévision avant le seuil brut. |
 | je5 | Détection des attaques cyber dans Sentinel Brain | Mercredi après-midi et soir | 1 h 30 | Lisa |  | Une attaque de test (connexion refusée en boucle, rejeu) produit un incident cyber au dashboard. |
-| je6 | Profil de site et page Réglages | Mercredi matin | 2 h | Constantin |  | Une sensibilité modifiée dans la page Réglages change le comportement sans redémarrage. |
+| je6 | Profil de site et page Réglages ✅ | Mercredi matin | 2 h | Constantin |  | Une sensibilité modifiée dans la page Réglages change le comportement sans redémarrage. |
+| je7 | Notifications vocales et mails (intrus, caméra masquée / rétablie) ✅ | Mercredi matin | 2 h | — |  | Un intrus devant la webcam déclenche l'annonce vocale et un mail avec sa photo ; masquer puis démasquer la caméra produit deux notifications. |
 | je4 | Présentation et pitch | Jeudi | 3 h | Constantin | **oui** | Workshop2026-M1-G<n>-Pres.pptx prêt, répété une fois. |
 
 ## Momo

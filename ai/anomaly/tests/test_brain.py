@@ -144,6 +144,24 @@ class VisionFusionTest(unittest.TestCase):
         self.assertIn(("intrusion_suspected", "warning"), self.types(self.vision(t, [(3, True, 1.0, None)])))
         self.assertIn(("loitering", "warning"), self.types(self.vision(t + 21, [(3, True, 22.0, None)])))
 
+    def test_unknown_person_confirmed_by_vision_alone_after_3s(self):
+        t = at(10)
+        self.assertIn(("intrusion_suspected", "warning"), self.types(self.vision(t, [(3, True, 0.5, None)])))
+        outs = self.vision(t + 3, [(3, True, 3.2, None)])          # toujours là 3 s plus tard, PIR muet
+        self.assertIn(("intrusion_confirmed", "critical"), self.types(outs))
+        alert = [o["payload"] for o in outs if o["kind"] == "alert"][0]
+        self.assertIn("confirmée par la vision", alert["explanation"])
+        self.assertEqual(self.types(self.vision(t + 4, [(3, True, 4.2, None)])), set())   # pas de répétition
+
+    def test_vision_confirmation_can_require_pir(self):
+        self.brain = SentinelBrain.from_profile({**PROFILE, "brain": {**PROFILE["brain"], "vision_confirm_s": 0}})
+        outs = self.vision(at(10), [(3, True, 10.0, None)])
+        self.assertIn(("intrusion_suspected", "warning"), self.types(outs))
+        self.assertNotIn(("intrusion_confirmed", "critical"), self.types(outs))
+
+    def test_authorized_badge_is_never_an_intruder(self):
+        self.assertEqual(self.types(self.vision(at(10), [(1, True, 30.0, 7)])), {("presence_authorized", "info")})
+
     def test_badge_hours(self):
         self.assertIn(("presence_authorized", "info"), self.types(self.vision(at(10), [(1, True, 2.0, 7)])))
         late = SentinelBrain.from_profile(PROFILE)
@@ -166,6 +184,15 @@ class VisionFusionTest(unittest.TestCase):
         self.brain = b
         self.vision(t, [(3, True, 1.0, None)])                  # quelqu'un, puis plus rien
         self.assertIn(("sabotage", "critical"), self.types(self.brain.tick(t + 20)))
+
+    def test_box_back_online_without_jamming_clears_cyber_score(self):
+        b = SentinelBrain(BrainConfig())
+        b.handle("sentinel/esp-01/telemetry", json.dumps(telem(1, 1000.0)), 1000.0)
+        b.handle("sentinel/esp-01/status", "offline", 1001.0)
+        b.handle("sentinel/esp-01/status", "online", 1010.0)
+        out = b.handle("sentinel/esp-01/telemetry", json.dumps(telem(2, 1012.0)), 1012.0)
+        score = [o["payload"] for o in out if o["kind"] == "score"][0]
+        self.assertEqual(score["cyber"], 0)
 
     def test_camera_offline_without_detection_is_maintenance(self):
         t = at(10)

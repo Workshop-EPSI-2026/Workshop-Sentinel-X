@@ -39,6 +39,7 @@ import time
 import uuid
 from collections import deque
 from dataclasses import dataclass, field
+from pathlib import Path
 
 try:
     import paho.mqtt.client as mqtt
@@ -114,10 +115,14 @@ class Simulator:
         self.s = Sensors(self.rng)
         self.device = a.device
         self.base = f"sentinel/{self.device}"
-        self.boot_id = uuid.UUID(int=self.rng.getrandbits(128)).hex[:8] if a.seed is not None else uuid.uuid4().hex[:8]
+        # Graine hors ligne : boot_id reproductible. En direct : toujours nouveau (sinon un 2e lancement serait vu comme un rejeu).
+        seeded_id = uuid.UUID(int=self.rng.getrandbits(128)).hex[:8] if a.seed is not None else None
+        self.boot_id = seeded_id if (seeded_id and a.no_mqtt) else uuid.uuid4().hex[:8]
         self.seq = 0
         # graine fixée : horloge de départ fixe aussi, pour un jeu de données identique octet pour octet
-        self.t0 = 1_790_000_000.0 if a.seed is not None else time.time()
+        # Hors ligne avec graine : date fixe (jeux reproductibles). En direct sur le broker : toujours l'heure réelle,
+        # sinon Brain rejette les messages comme horodatage falsifié (contrôle d'intégrité).
+        self.t0 = 1_790_000_000.0 if (a.seed is not None and a.no_mqtt) else time.time()
         self.sim_t = 0.0                  # secondes simulées depuis le démarrage
         self.gas_baseline: float | None = None
         self.ewma_gas: float | None = None
@@ -410,6 +415,19 @@ def parse_args(argv=None) -> argparse.Namespace:
         p.error("--period doit être d'au moins 1 s (limite du DHT11)")
     if a.speed <= 0:
         p.error("--speed doit être positif")
+    if not a.no_mqtt and not a.user:
+        # Poste serveur configuré par tools/configurer.py : compte du boîtier lu dans infra/.env
+        env = Path(__file__).resolve().parent.parent / "infra" / ".env"
+        if env.exists():
+            for line in env.read_text(encoding="utf-8").splitlines():
+                if line.startswith("MQTT_ESP_PASSWORD="):
+                    a.user, a.password = a.device, line.split("=", 1)[1].split(" #")[0].strip()
+                    print(f"[sim] compte {a.user} lu dans infra/.env", flush=True)
+    if a.speed > 1 and not a.no_mqtt:
+        print(f"[sim] ATTENTION : --speed {a.speed:g} en direct. Les horodatages avancent plus vite que l'horloge : "
+              "au-delà de 2 min d'avance, Sentinel Brain les rejette comme falsifiés (alerte cyber_attack). "
+              "Face à Brain, garder --speed 1 ; pour voir les scénarios en accéléré : python tools\\demo_brain.py",
+              file=sys.stderr, flush=True)
     if a.tls and not a.cafile:
         p.error("--tls exige --cafile")
     return a

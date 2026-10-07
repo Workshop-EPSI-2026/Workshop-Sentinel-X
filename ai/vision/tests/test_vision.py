@@ -64,6 +64,12 @@ class GeometryTest(unittest.TestCase):
         self.assertFalse(in_polygon(0.1, 0.5, ZONE))
         self.assertFalse(in_polygon(0.5, 0.99, ZONE))
 
+    def test_person_cut_by_bottom_edge_uses_box_center(self):
+        from app.analysis import foot_point
+        self.assertAlmostEqual(foot_point((0.4, 0.3, 0.6, 0.8))[1], 0.79)            # pieds visibles
+        x, y = foot_point((0.251, 0.322, 0.999, 0.998))                              # assis devant la webcam
+        self.assertTrue(in_polygon(x, y, ZONE))
+
 
 class IntegrityTest(unittest.TestCase):
     def test_normal_masked_dark(self):
@@ -74,6 +80,13 @@ class IntegrityTest(unittest.TestCase):
         covered = np.full_like(gray, 25) + np.random.default_rng(1).integers(0, 3, gray.shape, dtype=np.uint8)
         self.assertTrue(check_integrity(covered).masked)                 # main sur l'objectif
         self.assertTrue(check_integrity(np.full_like(gray, 230)).masked)  # papier blanc devant
+        # doigt devant une webcam : lueur rouge, dégradé et bruit (contraste > 10) mais aucun contour
+        yy, xx = np.mgrid[0:gray.shape[0], 0:gray.shape[1]]
+        glow = 60 + 70 * np.exp(-((xx - 320) ** 2 + (yy - 200) ** 2) / (2 * 180.0 ** 2))
+        finger = np.clip(glow + np.random.default_rng(2).normal(0, 2, gray.shape), 0, 255).astype(np.uint8)
+        f = check_integrity(finger)
+        self.assertGreater(f.contrast, 10)
+        self.assertTrue(f.masked)
         dark = (gray * 0.12).astype(np.uint8)
         d = check_integrity(dark)
         self.assertFalse(d.masked)                                       # pièce dans le noir : pas un sabotage

@@ -39,6 +39,13 @@ topic read  sentinel/+/vision
 topic read  sentinel/site/config
 topic write sentinel/brain/#
 
+# --- Notifications (ai/notify, sur le PC) : lit les alertes, l'état des caméras et le profil ; n'écrit rien
+user notify
+topic read  sentinel/brain/alert
+topic read  sentinel/+/vision
+topic read  sentinel/+/status
+topic read  sentinel/site/config
+
 # --- Supervision et tests (mosquitto_sub) : lecture seule
 user monitor
 topic read  sentinel/#

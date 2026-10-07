@@ -6,11 +6,12 @@ Deux modèles, deux services, un seul cerveau qui fusionne :
 |---|---|---|---|
 | `vision/` | Mouvement, YOLOv8n + suivi ByteTrack, zone interdite, temps de présence, badges ArUco, caméra masquée / sombre / figée, flux `/video` | **Sur le PC Windows, hors Docker** (webcam) ; conteneur sous Linux / Raspberry Pi | `python -m app.main` (port 8001) |
 | `anomaly/` | **Sentinel Brain** : 4 couches sur les capteurs, fusion avec la vision, badges et horaires, accès refusés du broker, incidents expliqués, score en direct | Conteneur `anomaly` (Docker Desktop) | `python -m app.main` |
+| `notify/` | **Notifications** : annonce vocale (« Intrus détecté », « Caméra masquée »…) et mail aux propriétaires avec photo, date et heure | **Sur le PC**, hors Docker (haut-parleurs) | `python -m app.main` |
 
 ```
 webcam ──► vision ──► sentinel/cam-01/vision ─┐
 ESP32-S3 ─► sentinel/esp-01/telemetry|event ──┼──► Sentinel Brain ──► POST /api/v1/alerts + sentinel/brain/score
-journal Mosquitto (accès refusés) ────────────┘
+journal Mosquitto (accès refusés) ────────────┘                                  └─► sentinel/brain/alert ──► notifications (voix, mail + photo)
 ```
 
 La vision **voit** (qui, où, depuis combien de temps, quel badge) ; Brain **décide** (intrusion confirmée par le PIR,

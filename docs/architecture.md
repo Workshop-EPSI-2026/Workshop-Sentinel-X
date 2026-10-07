@@ -37,7 +37,7 @@ démo**, **chaque alerte expliquée**, **un seul fichier de configuration par si
 | PIR HW-416-B | Mouvement jusqu'à ~7 m, comptage par minute | Temps mort, sensible à la chaleur | Cavalier H, fusion avec la vision |
 | PC portable (serveur) | Processeur x86 : YOLOv8n en PyTorch à ~40 ms par image (320 px) ; mémoire largement suffisante ; point d'accès Wi-Fi intégré | Docker Desktop n'accède pas à la webcam ; mises à jour et veille de Windows | Vision hors Docker ; mode Avion du Wi-Fi désactivé, veille désactivée pendant la démo |
 | Webcam USB (sur le PC) | Vision ; contrôle d'intégrité | Éclairage, champ | Zone et seuils réglables, PIR en relais quand l'image est mauvaise |
-| OLED, buzzer, LEDs | Affichage ; alarme sonore et visuelle | À confirmer dans le kit | Sans eux, la LED RGB intégrée sert de voyant |
+| LCD 1602, buzzer, LEDs | Affichage de l'état sur le boîtier ; alarme sonore et visuelle | LCD sans module I2C : 6 broches, contraste à régler | Mode 4 bits, RW à la masse, résistance fixe de contraste sur V0 |
 
 Idée clé : **une feuille de cuivre collée à l'intérieur du couvercle, reliée à une entrée tactile de l'ESP32-S3,
 devient un détecteur d'effraction gratuit**.
@@ -95,7 +95,8 @@ deux. L'opérateur ne voit que nginx, en HTTPS.
 | MQ-2 AO | GPIO 1 (ADC1) | 5 V | Pont 10 kΩ / 10 kΩ (max 2,5 V), moyenne de 16 lectures en mV |
 | MQ-2 DO | GPIO 6 | — | Pont 10 kΩ / 15 kΩ (≈ 3 V), seuil matériel par interruption |
 | Effraction (tactile) | GPIO 7 (T7) | — | Feuille de cuivre dans le couvercle, seuil auto-calibré |
-| OLED SDA / SCL | GPIO 8 / 9 | 3,3 V | Si disponible |
+| LCD 1602 RS / E | GPIO 8 / 9 | 5 V | Mode 4 bits, RW à la masse |
+| LCD 1602 D4 à D7 | GPIO 13 à 16 | — | Contraste par résistance fixe V0 → GND (≈ 1 kΩ) |
 | Buzzer | GPIO 10 | — | Si disponible |
 | LED verte / rouge | GPIO 11 / 12 | — | Résistance série, si disponibles |
 | LED RGB intégrée | GPIO 48 | — | Voyant d'état (38 sur certaines cartes) |
@@ -184,10 +185,16 @@ vision passe dans un conteneur (`docker-compose.linux.yml`).
 | `/api/v1/health` | GET | Santé du PC, des conteneurs, des boîtiers et de la vision |
 | `/ws` | WebSocket | Télémétrie, vision, scores, incidents en temps réel |
 
-Base (`infra/postgres/init/01-schema.sql`, tâche c5) : `devices`, `telemetry`, `events`, `health`, `device_status`,
-`vision_events`, `brain_scores`, `alerts` (cycle de vie ouvert → acquitté → résolu, un seul incident actif par
-équipement et type), `commands`, `config_versions`, `audit_log`, vues `v_latest_telemetry`, `v_open_alerts`,
-`v_training_telemetry` (export pour recalibrer Brain). Insertion idempotente sur (`device_id`, `boot_id`, `seq`).
+Base PostgreSQL : **créée par l'API** au démarrage (migrations de `api/app/db.py`, tâches c2 et c5) : `devices`,
+`telemetry`, `events`, `device_health`, `scores`, `alerts` (cycle de vie ouvert → acquitté → résolu, un seul incident
+actif par équipement et type, répétitions comptées), `commands`, `config_versions`, `audit_log`. Insertion idempotente
+sur (`device_id`, `boot_id`, `seq`). L'API accepte tous les types d'incidents de Brain v3 et combine les scores par
+équipement (boîtier, caméra) en une jauge : le maximum par domaine sur les équipements actifs.
+
+**Notifications** (`ai/notify`, sur le PC car il faut les haut-parleurs) : annonce vocale (« Intrus détecté »,
+« Caméra masquée », « Caméra rétablie »…) et mail aux propriétaires avec la photo du moment, la date et l'heure ; pour
+un masquage, la dernière image avant le masquage. Réglages : section `notifications` du profil (page Réglages) et
+SMTP dans `infra/.env`.
 
 Vues du dashboard : **Supervision** (jauge Sentinel Score, courbes, voyant du boîtier), **Incidents** (explication,
 acquittement), **Vision** (flux annoté, personnes, badges, état de la caméra), **Système** (santé de chaque brique),
@@ -229,8 +236,8 @@ Le domaine physique d'un boîtier inclut ce que voit la caméra. Règles de corr
 
 | Incident | Condition |
 | --- | --- |
-| Intrusion confirmée | Personne sans badge autorisé dans la zone **et** PIR à moins de 5 s |
-| Intrusion présumée | Vision seule (PIR silencieux), PIR seul quand la caméra est aveugle, ou personne non badgée accompagnée d'un agent |
+| Intrusion confirmée | Personne sans badge autorisé dans la zone **et** PIR à moins de 5 s, **ou** seule dans la zone depuis `vision_confirm_s` (3 s), même sans PIR |
+| Intrusion présumée | Vision seule pendant moins de `vision_confirm_s` (3 s ; au-delà : intrusion confirmée), PIR seul quand la caméra est aveugle, ou personne non badgée accompagnée d'un agent |
 | Rôdeur | Personne sans badge dans la zone depuis plus de 20 s |
 | Présence autorisée | Agent badgé dans la zone, dans ses horaires (information, pas d'alarme) |
 | Présence à vérifier | Badge connu mais hors de ses horaires |
@@ -295,7 +302,7 @@ incidents, export CSV.
 
 ## 11. Fabrication et vidéo
 
-Le boîtier n'abrite plus que l'ESP32-S3 et ses capteurs : plus petit, alimenté en USB-C. Façade : fenêtre OLED (si
+Le boîtier n'abrite plus que l'ESP32-S3 et ses capteurs : plus petit, alimenté en USB-C. Façade : fenêtre du LCD 1602 (si
 disponible), dôme PIR, LED d'état visible, gravure laser. Couvercle : feuille de cuivre tactile. Aération pour le MQ-2,
 DHT11 éloigné de lui. Le PC et la webcam sont posés à côté, la webcam orientée vers la zone surveillée.
 
