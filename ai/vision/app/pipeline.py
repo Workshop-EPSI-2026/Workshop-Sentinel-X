@@ -51,6 +51,7 @@ class VisionPipeline:
         self.frame_times: deque[float] = deque(maxlen=30)
         self.frames = 0
         self.last_person_t = -1e9
+        self.last_integrity = None
 
     def process(self, frame: np.ndarray, t: float | None = None) -> tuple[VisionState, np.ndarray]:
         t = time.time() if t is None else t
@@ -62,6 +63,7 @@ class VisionPipeline:
 
         # intégrité : masquage, obscurité, image figée (même image renvoyée en boucle)
         integ = check_integrity(gray, self.s.low_light_threshold)
+        self.last_integrity = integ                 # mesures brutes, lisibles dans /health (réglage sur place)
         masked = self.s.masking_detection and self.masked_p.update(integ.masked, t)
         low_light = self.dark_p.update(integ.low_light, t)
         small = cv2.resize(gray, (80, 60), interpolation=cv2.INTER_AREA)
