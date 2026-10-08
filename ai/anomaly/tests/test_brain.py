@@ -23,7 +23,8 @@ from brain.quality import DataQuality  # noqa: E402
 PARIS = __import__("zoneinfo").ZoneInfo("Europe/Paris")
 PROFILE = {"site": {"timezone": "Europe/Paris"},
            "brain": {"correlation_window_s": 5, "loitering_s": 20, "camera_timeout_s": 15},
-           "vision": {"authorized_badges": [{"id": 7, "name": "A. Martin", "hours": "07:00-19:00"}]}}
+           "vision": {"authorized_badges": [{"id": 7, "name": "A. Martin", "hours": "07:00-19:00"}],
+                      "authorized_faces": [{"name": "Michel"}, {"name": "Jeffrick", "hours": "08:00-18:00"}]}}
 
 
 def telem(seq: int, ts: float, **kw) -> dict:
@@ -126,7 +127,8 @@ class VisionFusionTest(unittest.TestCase):
         self.seq += 1
         msg = {"device_id": "cam-01", "seq": seq or self.seq, "boot_id": "c1", "ts": t, "fps": 10.0,
                "masked": masked, "low_light": low_light, "brightness": 120,
-               "persons": [{"track_id": i, "in_zone": z, "dwell_s": d, "badge": b} for i, z, d, b in persons]}
+               "persons": [{"track_id": p[0], "in_zone": p[1], "dwell_s": p[2], "badge": p[3],
+                            "face": p[4] if len(p) > 4 else None} for p in persons]}
         return self.brain.handle("sentinel/cam-01/vision", json.dumps(msg), t)
 
     @staticmethod
@@ -161,6 +163,25 @@ class VisionFusionTest(unittest.TestCase):
 
     def test_authorized_badge_is_never_an_intruder(self):
         self.assertEqual(self.types(self.vision(at(10), [(1, True, 30.0, 7)])), {("presence_authorized", "info")})
+
+    def test_recognized_face_is_authorized(self):
+        outs = self.vision(at(10), [(1, True, 30.0, None, "Michel")])
+        self.assertEqual(self.types(outs), {("presence_authorized", "info")})
+        alert = [o["payload"] for o in outs if o["kind"] == "alert"][0]
+        self.assertIn("Michel", alert["explanation"])
+        self.assertIn("visage reconnu", alert["explanation"])
+
+    def test_face_hours_and_unknown_face(self):
+        self.assertIn(("presence_to_verify", "warning"), self.types(self.vision(at(21), [(1, True, 2.0, None, "Jeffrick")])))
+        self.brain = SentinelBrain.from_profile(PROFILE)
+        outs = self.vision(at(10), [(1, True, 5.0, None, "Inconnu")])    # nom absent de la liste blanche
+        self.assertIn(("intrusion_confirmed", "critical"), self.types(outs))
+
+    def test_face_does_not_cover_a_second_person(self):
+        outs = self.vision(at(10), [(1, True, 5.0, None, "Michel"), (2, True, 5.0, None)])
+        alert = [o["payload"] for o in outs if o["kind"] == "alert"][0]
+        self.assertEqual(alert["type"], "intrusion_suspected")
+        self.assertIn("accompagn", alert["explanation"])
 
     def test_badge_hours(self):
         self.assertIn(("presence_authorized", "info"), self.types(self.vision(at(10), [(1, True, 2.0, 7)])))

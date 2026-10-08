@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { LevelTag } from '../components/StatusIcon';
-import { ALERT_TYPE, fmtAgo, fmtNum, severityLevel, type Level } from '../format';
+import { ALERT_TYPE, fmtAgo, fmtNum, personLabel, severityLevel, type Level } from '../format';
 import { useApp, useNow } from '../state';
 import type { SystemHealth } from '../types';
 
@@ -71,13 +71,13 @@ export function Vision() {
             <ul className="incident-mini">
               {inZone.map((p) => (
                 <li key={p.track_id}>
-                  <LevelTag level={p.authorized ? 'good' : 'critical'} label={p.authorized ? `Badge ${p.badge} autorisé` : p.badge !== null ? `Badge ${p.badge} non autorisé` : 'Sans badge'} />
+                  <LevelTag level={p.authorized ? 'good' : 'critical'} label={personLabel(p)} />
                   <span className="muted nowrap">#{p.track_id} · {Math.round(p.dwell_s)} s</span>
                 </li>
               ))}
             </ul>
           )}
-          {live && intruders.length > 0 && <p className="muted small">Brain confirme l'intrusion avec le PIR et les horaires des badges.</p>}
+          {live && intruders.length > 0 && <p className="muted small">Brain confirme l'intrusion avec le PIR et les horaires des badges et visages autorisés.</p>}
         </section>
         <section className="card">
           <h2 className="card-title">Performances</h2>

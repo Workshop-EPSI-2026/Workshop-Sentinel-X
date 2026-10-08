@@ -35,6 +35,11 @@ class VisionSettings:
     low_light_threshold: float = 35.0
     authorized_badges: dict[int, str] = field(default_factory=dict)   # affichage seulement : Brain décide
     aruco_dictionary: str = "DICT_4X4_50"
+    # visages autorisés (liste blanche, avec l'accord des personnes) : affichage seulement, Brain décide
+    authorized_faces: dict[str, str] = field(default_factory=dict)   # nom dans la galerie -> nom affiché
+    face_recognition: bool = True        # actif si les modèles et la galerie existent (ai/vision/tools/visages.py)
+    face_threshold: float = 0.45         # similarité cosinus SFace minimale
+    face_gallery: str = "data/visages.npz"
     # rythme
     publish_period_s: float = 1.0
     yolo_every_n_frames: int = 10        # sans mouvement : YOLO une image sur 10 (personne immobile)
@@ -54,6 +59,15 @@ class VisionSettings:
         p = Path(self.model)
         return str(p if p.is_absolute() else VISION_DIR / "models" / p)
 
+    @property
+    def face_gallery_path(self) -> str:
+        p = Path(self.face_gallery)
+        return str(p if p.is_absolute() else VISION_DIR / p)
+
+    @property
+    def models_dir(self) -> str:
+        return str(VISION_DIR / "models")
+
     @classmethod
     def load(cls, profile_path: str | None = None, **overrides) -> VisionSettings:
         s = cls()
@@ -66,6 +80,8 @@ class VisionSettings:
         s.device_id = _env("VISION_DEVICE_ID", s.device_id)
         s.http_host = _env("VISION_HTTP_HOST", s.http_host)
         s.http_port = int(_env("VISION_HTTP_PORT", str(s.http_port)))
+        s.face_gallery = _env("VISION_FACE_GALLERY", s.face_gallery)
+        s.face_recognition = _bool(_env("VISION_FACES", str(s.face_recognition)))
         s.mqtt_host = _env("MQTT_HOST", s.mqtt_host)
         s.mqtt_port = int(_env("MQTT_PORT", str(s.mqtt_port)))
         s.mqtt_tls = _bool(_env("MQTT_TLS", str(s.mqtt_tls)))
@@ -89,3 +105,7 @@ class VisionSettings:
         self.aruco_dictionary = str(v.get("aruco_dictionary", self.aruco_dictionary))
         self.authorized_badges = {int(b["id"]): str(b.get("name", b["id"]))
                                   for b in v.get("authorized_badges", []) or []}
+        self.face_recognition = bool(v.get("face_recognition", self.face_recognition))
+        self.face_threshold = float(v.get("face_threshold", self.face_threshold))
+        self.authorized_faces = {str(f["name"]): str(f.get("label", f["name"]))
+                                 for f in v.get("authorized_faces", []) or []}

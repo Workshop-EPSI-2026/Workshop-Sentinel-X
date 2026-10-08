@@ -1,8 +1,9 @@
 """Règles de site : badges autorisés et horaires, vision, sécurité du broker.
 
 Lu dans le profil de site (config/site.example.yml), rechargé à chaud avec sentinel/site/config.
-La caméra lit un badge (marqueur ArUco porté par l'agent) ; Brain seul décide s'il est autorisé,
-selon la liste blanche et les horaires du profil. Aucune donnée biométrique n'est utilisée.
+La caméra lit un badge (marqueur ArUco porté par l'agent) ou reconnaît un visage enrôlé (galerie locale du service
+vision, membres consentants) ; Brain seul décide si la personne est autorisée, selon la liste blanche
+(vision.authorized_badges, vision.authorized_faces) et les horaires du profil.
 """
 from __future__ import annotations
 
@@ -46,6 +47,7 @@ class Badge:
 class SitePolicy:
     timezone: str = "Europe/Paris"
     badges: dict[int, Badge] = field(default_factory=dict)
+    faces: dict[str, Badge] = field(default_factory=dict)     # nom dans la galerie de visages -> horaires
     correlation_window_s: float = 5.0     # PIR et personne vue à moins de 5 s : intrusion confirmée
     loitering_s: float = 20.0             # présence prolongée dans la zone
     vision_confirm_s: float = 3.0         # inconnu dans la zone depuis 3 s : intrus confirmé sans PIR (0 = PIR exigé)
@@ -58,16 +60,19 @@ class SitePolicy:
     def from_profile(cls, profile: dict) -> SitePolicy:
         br = profile.get("brain", {}) or {}
         vi = profile.get("vision", {}) or {}
-        badges = {}
-        for b in vi.get("authorized_badges", []) or []:
+        def rule(b: dict, ident: int, default_name: str) -> Badge:
             start = end = None
             if b.get("hours"):
                 a, z = str(b["hours"]).split("-")
                 start, end = _hhmm(a), _hhmm(z)
-            days = tuple(d.lower()[:3] for d in b.get("days", DAYS))
-            badges[int(b["id"])] = Badge(int(b["id"]), str(b.get("name", f"badge {b['id']}")), start, end, days)
+            days = tuple(d.lower()[:3] for d in (b.get("days") or DAYS))
+            return Badge(ident, str(b.get("name") or default_name), start, end, days)
+
+        badges = {int(b["id"]): rule(b, int(b["id"]), f"badge {b['id']}")
+                  for b in vi.get("authorized_badges", []) or []}
+        faces = {str(f["name"]): rule(f, -1, str(f["name"])) for f in vi.get("authorized_faces", []) or []}
         d = cls()
-        return cls(timezone=(profile.get("site", {}) or {}).get("timezone", d.timezone), badges=badges,
+        return cls(timezone=(profile.get("site", {}) or {}).get("timezone", d.timezone), badges=badges, faces=faces,
                    correlation_window_s=float(br.get("correlation_window_s", d.correlation_window_s)),
                    loitering_s=float(br.get("loitering_s", d.loitering_s)),
                    vision_confirm_s=float(br.get("vision_confirm_s", d.vision_confirm_s)),
@@ -78,6 +83,14 @@ class SitePolicy:
 
     def local(self, ts: float) -> datetime:
         return datetime.fromtimestamp(ts, ZoneInfo(self.timezone))
+
+    def check_face(self, face: str | None, ts: float) -> tuple[bool, Badge | None, bool]:
+        """Comme check_badge, pour un visage reconnu par la vision."""
+        b = self.faces.get(str(face)) if face else None
+        if b is None:
+            return False, None, False
+        ok = b.allowed_at(self.local(ts))
+        return ok, b, not ok
 
     def check_badge(self, badge: int | None, ts: float) -> tuple[bool, Badge | None, bool]:
         """(autorisé maintenant, badge connu, badge connu mais hors horaires)."""
@@ -99,6 +112,7 @@ class Person:
     authorized: bool = False              # décidé par Brain (liste blanche + horaires)
     off_hours: bool = False
     name: str | None = None
+    face: str | None = None               # visage reconnu par la vision (indice, comme un badge)
 
 
 @dataclass

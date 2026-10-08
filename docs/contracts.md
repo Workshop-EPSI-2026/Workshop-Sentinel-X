@@ -67,7 +67,7 @@ Le même contrat vaut sur un serveur Linux ou un Raspberry Pi : seule l'adresse 
 ```json
 {"device_id": "cam-01", "seq": 812, "boot_id": "111ae725", "ts": 1791278595.96, "fps": 10.0, "motion": true,
  "brightness": 126.0, "masked": false, "low_light": false, "frozen": false, "zone_count": 1,
- "persons": [{"track_id": 3, "in_zone": true, "dwell_s": 14.2, "badge": null, "authorized": false,
+ "persons": [{"track_id": 3, "in_zone": true, "dwell_s": 14.2, "badge": null, "face": null, "authorized": false,
               "conf": 0.82, "box": [0.42, 0.31, 0.56, 0.91]}]}
 ```
 
@@ -80,6 +80,7 @@ Le même contrat vaut sur un serveur Linux ou un Raspberry Pi : seule l'adresse 
 | `persons[].track_id` | Identifiant de suivi (ByteTrack), stable tant que la personne reste visible |
 | `persons[].in_zone`, `dwell_s` | Pieds dans la zone interdite du profil, temps passé dans la zone |
 | `persons[].badge` | Numéro du badge ArUco lu sur la personne (conservé pendant tout le suivi), `null` sinon |
+| `persons[].face`, `face_score` | Nom reconnu par la galerie locale de visages (confirmé par 2 reconnaissances), `null` sinon ; similarité 0..1 |
 | `persons[].authorized` | Indication de la vision (liste blanche seule). **Brain décide** avec la liste blanche **et** les horaires |
 | `box` | Boîte normalisée 0..1 (x1, y1, x2, y2) |
 
@@ -107,7 +108,7 @@ plus vieille que 30 s ou dont l'`id` a déjà été vu.
 
 | Type | Domaine | Gravité usuelle | Quand |
 | --- | --- | --- | --- |
-| `intrusion_confirmed` | physical | critical | Personne sans badge dans la zone **et** PIR à moins de 5 s, ou seule dans la zone depuis `vision_confirm_s` (3 s) |
+| `intrusion_confirmed` | physical | critical | Personne sans badge ni visage autorisé dans la zone **et** PIR à moins de 5 s, ou seule dans la zone depuis `vision_confirm_s` (3 s) |
 | `intrusion_suspected` | physical | warning | Vision seule pendant les `vision_confirm_s` premières secondes, PIR seul (caméra aveugle), ou personne non badgée accompagnée d'un agent |
 | `loitering` | physical | warning | Personne sans badge dans la zone depuis plus de `loitering_s` |
 | `presence_authorized` | physical | info | Agent badgé dans la zone, dans ses horaires |

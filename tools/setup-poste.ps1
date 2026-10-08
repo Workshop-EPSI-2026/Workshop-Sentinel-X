@@ -164,6 +164,9 @@ if (Test-Path ai\vision\models\yolov8n.pt) {
   & $py -c "from ultralytics import YOLO; YOLO(r'ai\vision\models\yolov8n.pt')"
   if (-not (Test-Path ai\vision\models\yolov8n.pt)) { Warn "modele non telecharge : relancer installer.cmd avec Internet." }
 }
+Info "modeles de reconnaissance des visages (YuNet + SFace, 37 Mo)"
+& $py ai\vision\tools\visages.py modeles
+if ($LASTEXITCODE -ne 0) { Warn "modeles visages non telecharges : la vision tourne sans reconnaissance." }
 Info "dependances installees"
 
 # ------------------------------------------------------------------ 7. Controle

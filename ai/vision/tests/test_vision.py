@@ -24,6 +24,7 @@ from app.analysis import (  # noqa: E402
     in_polygon,
 )
 from app.config import VisionSettings  # noqa: E402
+from app.faces import FaceEngine, FaceMatch, Gallery, IdentityVotes  # noqa: E402
 from app.pipeline import VisionPipeline  # noqa: E402
 from app.service import Publisher  # noqa: E402
 
@@ -168,6 +169,92 @@ class PipelineTest(unittest.TestCase):
         for i in range(30):
             st, _ = p.process(np.full((480, 640, 3), 20, np.uint8), i * 0.1)
         self.assertTrue(st.masked)
+
+
+def unit(*xs: float) -> np.ndarray:
+    v = np.zeros(128, np.float32)
+    v[:len(xs)] = xs
+    return v
+
+
+class FacesTest(unittest.TestCase):
+    """Logique de la reconnaissance, sans réseau neuronal (vecteurs fabriqués)."""
+
+    def gallery(self) -> Gallery:
+        feats = [unit(1, 0.1), unit(1, -0.1), unit(1, 0), unit(0, 1, 0.1), unit(0, 1, -0.1), unit(0, 1)]
+        return Gallery(["Michel", "Jeffrick"], np.array(feats), np.array([0, 0, 0, 1, 1, 1]))
+
+    def test_match_known_unknown_and_ambiguous(self):
+        g = self.gallery()
+        self.assertEqual(g.match(unit(1, 0.05))[0], "Michel")
+        self.assertEqual(g.match(unit(0.05, 1))[0], "Jeffrick")
+        self.assertIsNone(g.match(unit(0, 0, 1))[0])            # personne inconnue : loin des deux
+        self.assertIsNone(g.match(unit(1, 1))[0])               # entre les deux : marge insuffisante, inconnu
+
+    def test_save_and_load_keeps_no_image(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as d:
+            path = Path(d) / "visages.npz"
+            self.gallery().save(path)
+            self.assertEqual(sorted(np.load(path).files), ["feats", "labels", "names"])
+            self.assertEqual(Gallery.load(path).match(unit(1, 0))[0], "Michel")
+
+    def test_identity_needs_two_concordant_votes(self):
+        v = IdentityVotes()
+        box = (0, 0, 1, 1)
+        v.add(FaceMatch("Michel", 0.6, box))
+        self.assertIsNone(v.name)                               # une seule reconnaissance : pas encore
+        v.add(FaceMatch(None, 0.2, box))                        # visage flou : ne compte ni pour ni contre
+        v.add(FaceMatch("Michel", 0.7, box))
+        self.assertEqual(v.name, "Michel")
+        v.add(FaceMatch("Jeffrick", 0.6, box))                  # autre visage sur la même piste : on repart de zéro
+        self.assertIsNone(v.name)
+
+    def test_profile_face_is_not_compared(self):
+        face = np.zeros(15, np.float32)
+        face[4:10] = [100, 100, 140, 100, 120, 120]              # oeil droit, oeil gauche, nez au milieu
+        self.assertTrue(FaceEngine.frontal(face))
+        face[8] = 150                                            # nez hors des yeux : tête de profil
+        self.assertFalse(FaceEngine.frontal(face))
+
+
+class FakeFaces:
+    def __init__(self, name):
+        self.name, self.calls = name, 0
+
+    def identify(self, frame, box):
+        self.calls += 1
+        return FaceMatch(self.name, 0.62, box)
+
+
+class FacePipelineTest(unittest.TestCase):
+    def test_recognized_face_is_published_and_authorized(self):
+        s = VisionSettings(zone=ZONE, mqtt_enabled=False, authorized_faces={"Michel": "Michel"})
+        faces = FakeFaces("Michel")
+        p = VisionPipeline(s, FakeDetector([[(1, (0.4, 0.3, 0.6, 0.9), 0.9)]]), faces)
+        st = None
+        for i in range(20):
+            st, img = p.process(scene(i), i * 0.1)
+        person = st.persons[0]
+        self.assertEqual(person["face"], "Michel")
+        self.assertTrue(person["authorized"])
+        self.assertLess(faces.calls, 10)                         # reconnue : contrôles espacés (5 s)
+        self.assertIn("face", Publisher(s).message(st)["persons"][0])
+
+    def test_face_outside_whitelist_is_not_authorized(self):
+        s = VisionSettings(zone=ZONE, mqtt_enabled=False, authorized_faces={})
+        p = VisionPipeline(s, FakeDetector([[(1, (0.4, 0.3, 0.6, 0.9), 0.9)]]), FakeFaces("Michel"))
+        for i in range(20):
+            st, _ = p.process(scene(i), i * 0.1)
+        self.assertEqual(st.persons[0]["face"], "Michel")
+        self.assertFalse(st.persons[0]["authorized"])
+
+
+@unittest.skipUnless(FaceEngine.available(VISION / "models"), "modèles YuNet/SFace absents (tools/visages.py modeles)")
+class FaceModelsTest(unittest.TestCase):
+    def test_models_load_and_find_no_face_in_empty_scene(self):
+        e = FaceEngine(VISION / "models")
+        self.assertEqual(len(e.detect(scene())), 0)
 
 
 @unittest.skipUnless((VISION / "models" / "yolov8n.pt").exists(), "modèle yolov8n.pt absent")

@@ -1,4 +1,4 @@
-import type { AlertStatus, AlertType, Domain, Mode, Severity, Telemetry, DeviceStatus } from './types';
+import type { AlertStatus, AlertType, Domain, Mode, Severity, Telemetry, DeviceStatus, VisionPerson } from './types';
 
 export const fmtNum = (v: number, digits = 0) =>
   v.toLocaleString('fr-FR', { minimumFractionDigits: digits, maximumFractionDigits: digits });
@@ -90,4 +90,11 @@ export function deviceLed(t: Telemetry | undefined, status: DeviceStatus | undef
   if (t.edge_score >= 70) return { color: 'var(--led-red)', label: 'Alarme' };
   if (t.edge_score >= 40) return { color: 'var(--led-orange)', label: 'Suspicion' };
   return { color: 'var(--led-green)', label: 'Surveillance' };
+}
+
+/** Qui est cette personne pour Sentinel-X : visage reconnu, badge, ou inconnue (Brain décide de l'autorisation). */
+export function personLabel(p: VisionPerson): string {
+  if (p.face) return p.authorized ? `${p.face} · visage reconnu` : `${p.face} · visage non autorisé`;
+  if (p.badge !== null) return p.authorized ? `Badge ${p.badge} autorisé` : `Badge ${p.badge} non autorisé`;
+  return 'Inconnu (ni badge ni visage)';
 }

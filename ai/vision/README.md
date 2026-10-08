@@ -25,6 +25,10 @@ python tools\demo_video.py                                 # -> data\demo.mp4
 python -m app.main --env ..\..\infra\.env --source data\demo.mp4
 python tools\badges.py 7 12                                # -> data\badges\badge-07.png (imprimer à 6 cm)
 python tools\benchmark.py                                  # tableau de latence (tâche j2)
+python tools\visages.py modeles                            # YuNet + SFace (37 Mo) dans models\
+python tools\visages.py enroler C:\photos                  # un sous-dossier par personne : C:\photos\Michel\*.jpg
+python tools\visages.py tester                             # fiabilité de la galerie (validation croisée)
+python tools\visages.py oublier Michel                     # retire une personne (droit à l'effacement)
 python -m unittest discover -s tests -v
 ```
 
@@ -37,6 +41,17 @@ la vision ne contacte plus Internet (`YOLO_OFFLINE`). Sur Raspberry Pi : `python
 - **Zone** : polygone normalisé ; une personne est « dans la zone » quand ses pieds y sont.
 - **Badges** : `authorized_badges` (id, nom, horaires). La vision lit le badge et le garde pendant tout le suivi de la
   personne ; **Brain décide** avec les horaires (agent autorisé, présence à vérifier, intrus accompagné).
+- **Visages** : `authorized_faces` (nom, horaires), avec l'accord écrit des personnes. `visages.py enroler` garde
+  seulement des vecteurs de 128 nombres (`data\visages.npz`, hors dépôt), **jamais les photos**. Seuls les visages
+  de face sont comparés (de profil, deux personnes se ressemblent trop) ; une identité est confirmée après deux
+  reconnaissances concordantes, puis revérifiée toutes les 5 s. Comme pour un badge, **Brain décide** avec les
+  horaires. Sans modèles ou sans galerie, la vision tourne normalement sans reconnaissance (`VISION_FACES=0` pour
+  la couper). Mesure sur les photos de l'équipe (Michel, Jeffrick ; webcam du PC) : 42 visages de face sur 45
+  reconnus, **aucune confusion** entre les deux, similarité maximale entre eux 0,35 pour un seuil de 0,45 ; 20 à
+  40 ms par visage, au plus un par image.
+  **Limite** : une photo du visage tenue devant la caméra peut tromper SFace (pas de détection du vivant) : un
+  visage reconnu reste un indice, comme un badge photocopié ; le PIR, les horaires et le mode maintenance restent
+  croisés par Brain.
 - **Intégrité** : image uniforme ou noire 2 s = caméra masquée (sabotage) ; image sombre mais texturée 3 s = faible
   luminosité (le PIR prend le relais) ; image strictement identique 10 s = flux figé.
 - **Économie** : YOLO ne tourne que s'il y a du mouvement, une personne récente, ou une image sur 10.

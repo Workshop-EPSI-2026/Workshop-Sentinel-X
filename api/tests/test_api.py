@@ -202,6 +202,17 @@ class ApiTest(unittest.TestCase):
         self.assertEqual(r.json()["version"], cfg["version"] + 1)
         self.assertEqual(r.json()["profile"]["brain"]["vision_confirm_s"], 2)
 
+    def test_authorized_faces_are_validated(self):
+        profile = self.client.get("/api/v1/config", headers=self.op).json()["profile"]
+        bad = json.loads(json.dumps(profile))
+        bad["vision"]["authorized_faces"] = [{"name": "<script>alert(1)</script>"}]
+        self.assertEqual(self.client.put("/api/v1/config", json={"profile": bad}, headers=self.op).status_code, 422)
+        good = json.loads(json.dumps(profile))
+        good["vision"]["authorized_faces"] = [{"name": "Michel"}, {"name": "Jeffrick", "hours": "08:00-18:00"}]
+        r = self.client.put("/api/v1/config", json={"profile": good}, headers=self.op)
+        self.assertEqual(r.status_code, 200, r.text)
+        self.assertEqual([f["name"] for f in r.json()["profile"]["vision"]["authorized_faces"]], ["Michel", "Jeffrick"])
+
     # ------------------------------------------------------------------ temps réel (WebSocket)
     def test_websocket_refuses_missing_or_wrong_token(self):
         for first in ({"type": "auth", "token": "mauvais"}, {"type": "hello"}, {"token": OPERATOR}):

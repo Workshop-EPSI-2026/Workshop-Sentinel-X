@@ -64,6 +64,11 @@ vision:                            # service vision (sur le PC Windows, hors Doc
   authorized_badges:               # liste blanche : Brain décide avec les horaires (hours vide = toujours)
     - { id: 7,  name: "A. Martin (technicien)", hours: "07:00-19:00", days: [mon, tue, wed, thu, fri] }
     - { id: 12, name: "Astreinte AetherCorp" }
+  face_recognition: true           # visages enrôlés sur le PC (ai/vision/tools/visages.py), avec l'accord des personnes
+  face_threshold: 0.45             # similarité minimale (0..1) ; plus haut = moins de fausses reconnaissances
+  authorized_faces:                # liste blanche par nom de la galerie ; horaires comme les badges (vide = toujours)
+    - { name: "Michel" }
+    - { name: "Jeffrick" }
 
 integrations:
   webhook_url: ""                  # vide = désactivé ; POST JSON de chaque incident

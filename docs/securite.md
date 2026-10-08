@@ -11,7 +11,8 @@
 | Commandes du boîtier | Commande forgée ou rejouée (couper l'alarme pendant une intrusion) | Seule l'API publie sur `sentinel/esp-01/cmd` (ACL), après authentification de l'opérateur ; le boîtier ignore toute commande de plus de 30 s ou déjà exécutée (`id`) | Rejeu d'une commande capturée : « commande ignorée » au moniteur série | Testé en simulation |
 | Boîtier | Ouverture, vol des secrets | Effraction tactile, secrets hors dépôt, compte à droits minimaux, certificat révocable | Démo d'ouverture, ACL | |
 | Caméra | Masquage, aveuglement, image figée, rejeu | Détection d'image uniforme, de faible luminosité et d'image figée ; `seq` + `boot_id` sur les messages vision ; caméra muette après une détection = sabotage | Incident « sabotage » en démo | |
-| Vie privée | Biométrie, conservation d'images | **Aucune reconnaissance faciale** : badges ArUco ; pas d'enregistrement vidéo, seulement des résumés (personnes, zone) en base | Contrat vision, schéma de la base | |
+| Vie privée | Biométrie (RGPD art. 9), conservation d'images | Reconnaissance des visages **limitée aux membres consentants** (Michel, Jeffrick), traitée sur le PC : vecteurs de 128 nombres seulement (`ai/vision/data/visages.npz`, hors dépôt), photos d'enrôlement à supprimer après usage, `visages.py oublier NOM` pour l'effacement ; personne d'autre n'est identifiée ; pas d'enregistrement vidéo, seulement des résumés (personnes, zone) en base | `visages.py tester`, `.gitignore`, contrat vision | Testé |
+| Usurpation de visage | Photo de Michel montrée à la caméra | Visage = indice, pas preuve : horaires, PIR, mode maintenance croisés par Brain ; seuil strict (0,45), 2 reconnaissances concordantes, visages de profil ignorés. Pas de détection du vivant : limite assumée | Essai avec une photo sur un téléphone pendant le pentest | Limite connue |
 | Dépôt | Fuite de secrets | `.gitignore`, gitleaks en CI | Rapport gitleaks | |
 
 ## Vérification automatique (preuve)
