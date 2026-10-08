@@ -5,6 +5,30 @@ Serveur : le PC portable (point d'accès Windows, **192.168.137.1**). Wi-Fi en *
 Carte : **ESP32-S3 N16R8** (16 Mo de flash, 8 Mo de PSRAM octale). Téléverser par le port USB-C **COM**.
 Brochage : `include/pins.h` et `docs/cablage.md`. Contrat des messages : `docs/contracts.md`.
 
+## Sketch du boîtier de la démo : `sentinel_lisa/` (Arduino IDE)
+
+Câblage réel : PIR GPIO 5, MQ-2 GPIO 6 (ADC1, pont diviseur si 5 V), DHT11 GPIO 4, buzzer GPIO 7.
+
+1. Sur le PC serveur : `python security\pki\pki.py --ip <adresse du PC>` si le boîtier joint le PC par une autre
+   adresse que 192.168.137.1 (partage de connexion d'un téléphone…). Ça ne refait que le certificat du serveur
+   (la CA ne change pas) et copie `certs.h` dans `sentinel_lisa/`. Puis `docker restart snx-mosquitto snx-nginx`.
+2. Copier `sentinel_lisa/secrets.example.h` en `secrets.h` et le remplir : Wi-Fi (2,4 GHz, mot de passe **sans
+   accent**), `MQTT_HOST` (adresse du PC), `MQTT_USE_TLS 1`, mot de passe `esp-01` (`configurer.py --afficher`).
+3. Arduino IDE 2, carte « ESP32S3 Dev Module », bibliothèques PubSubClient, DHT sensor library, Adafruit Unified
+   Sensor. Téléverser, moniteur série à 115200 bauds : `Connexion MQTT a … (TLS)... OK`, puis les envois.
+
+| Bouton du dashboard | Effet sur le boîtier |
+| --- | --- |
+| Déclencher l'alarme | Sirène continue jusqu'à « Couper l'alarme » |
+| Couper l'alarme | Silence, **même pendant une alerte gaz**, jusqu'au retour au calme (5 min au plus) ; l'incident reste à acquitter dans le dashboard |
+| Passer en maintenance / en surveillance | Buzzer muet en maintenance ; `mode` le signale dans la télémétrie |
+| Recalibrer | Réapprend l'air habituel du MQ-2 (2 s) |
+| Redémarrer | Redémarrage (statut `offline` puis `online`) |
+
+Une commande de plus de 30 s ou déjà exécutée (même `id`) est ignorée : un rejeu capturé ne fait rien.
+En TLS, `echec, code = -2` suivi d'une ligne `TLS : …` = certificat refusé (adresse absente du certificat, ou
+`certs.h` d'une autre CA) ; sans ligne TLS = serveur injoignable (adresse, pare-feu, Sentinel-X arrêté).
+
 ## platformio.ini (à créer à la racine de `firmware/` avec le code)
 
 ```ini

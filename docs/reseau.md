@@ -14,6 +14,14 @@ Docker Desktop (broker, base, API, dashboard, Sentinel Brain) et la vision sur l
 | Source | Le PC doit être relié à un réseau (Wi-Fi de l'école ou Ethernet) pour activer le point d'accès ; Sentinel-X n'utilise pas Internet |
 | Clients | 8 au maximum (limite Windows) : largement suffisant |
 
+### Variante : partage de connexion d'un téléphone
+
+Le PC serveur et le boîtier se connectent au même partage de connexion (2,4 GHz, mot de passe sans accent).
+L'adresse du PC est celle que donne `ipconfig` (carte Wi-Fi), par exemple `10.68.118.203` : la mettre dans
+`MQTT_HOST` du boîtier et dans le certificat du serveur (`python security\pki\pki.py --ip 10.68.118.203`, puis
+`docker restart snx-mosquitto snx-nginx`). Vérifier l'adresse avant chaque démo : un téléphone peut en changer.
+Les règles du pare-feu (`serveur-pc.ps1 -Action PareFeu`) acceptent aussi le sous-réseau local : rien à changer.
+
 ## Plan d'adressage
 
 Windows fixe lui-même le réseau du point d'accès : **192.168.137.0/24**, le PC en **192.168.137.1**.
