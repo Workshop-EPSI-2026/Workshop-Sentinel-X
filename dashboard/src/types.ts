@@ -93,6 +93,8 @@ export interface VisionPerson {
   in_zone: boolean;
   dwell_s: number;
   badge: number | null;
+  face?: string | null;       // visage reconnu (galerie locale du service vision)
+  face_score?: number | null;
   authorized: boolean;
 }
 
@@ -181,6 +183,9 @@ export interface SiteProfile {
     zone: [number, number][];
     masking_detection: boolean;
     low_light_threshold: number;
+    face_recognition?: boolean;
+    face_threshold?: number;
+    authorized_faces?: { name: string; hours?: string; days?: string[] }[];
   };
   integrations: { webhook_url: string; csv_export: boolean };
 }

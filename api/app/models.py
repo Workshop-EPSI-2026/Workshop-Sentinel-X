@@ -199,6 +199,13 @@ class Badge(Strict):
     days: list[Literal["mon", "tue", "wed", "thu", "fri", "sat", "sun"]] = Field(default_factory=list)
 
 
+class Face(Strict):
+    """Visage autorisé : nom de la personne dans la galerie locale du service vision (ai/vision/tools/visages.py)."""
+    name: str = Field(min_length=1, max_length=40, pattern=r"^[\w .'-]+$")
+    hours: str = Field(default="", pattern=r"^$|^\d{2}:\d{2}-\d{2}:\d{2}$")
+    days: list[Literal["mon", "tue", "wed", "thu", "fri", "sat", "sun"]] = Field(default_factory=list)
+
+
 class Vision(Strict):
     enabled: bool
     imgsz: Literal[320, 416, 480, 640]
@@ -209,6 +216,9 @@ class Vision(Strict):
     low_light_threshold: int = Field(ge=0, le=255)
     aruco_dictionary: str = Field(default="DICT_4X4_50", max_length=30)
     authorized_badges: list[Badge] = Field(default_factory=list, max_length=100)
+    face_recognition: bool = True
+    face_threshold: float = Field(default=0.45, ge=0.3, le=0.9)
+    authorized_faces: list[Face] = Field(default_factory=list, max_length=20)
 
 
 class Site(Strict):

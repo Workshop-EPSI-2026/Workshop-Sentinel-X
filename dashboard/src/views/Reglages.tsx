@@ -144,7 +144,12 @@ export function Reglages() {
         <div className="check-row">
           <Check label="Vision active" checked={draft.vision.enabled} onChange={(v) => edit((p) => { p.vision.enabled = v; })} />
           <Check label="Détection de caméra masquée" checked={draft.vision.masking_detection} onChange={(v) => edit((p) => { p.vision.masking_detection = v; })} />
+          <Check label="Reconnaissance des visages autorisés" checked={draft.vision.face_recognition ?? true} onChange={(v) => edit((p) => { p.vision.face_recognition = v; })} />
         </div>
+        <p className="muted small">
+          Visages autorisés : {(draft.vision.authorized_faces ?? []).map((f) => f.name + (f.hours ? ` (${f.hours})` : '')).join(', ') || 'aucun'}
+          {' '}· liste dans config/, galerie enrôlée sur le PC (ai/vision/tools/visages.py).
+        </p>
         <Slider label="Confiance minimale" value={draft.vision.confidence} min={0.1} max={0.95} onChange={(v) => edit((p) => { p.vision.confidence = v; })} />
         <div className="form-grid">
           <NumberInput label="Seuil de faible luminosité (0-255)" value={draft.vision.low_light_threshold} step={5} onChange={(v) => edit((p) => { p.vision.low_light_threshold = v; })} />

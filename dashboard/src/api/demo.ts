@@ -56,6 +56,9 @@ const DEFAULT_PROFILE: SiteProfile = {
     zone: [[0.2, 0.25], [0.8, 0.25], [0.8, 0.95], [0.2, 0.95]],
     masking_detection: true,
     low_light_threshold: 35,
+    face_recognition: true,
+    face_threshold: 0.45,
+    authorized_faces: [{ name: 'Michel' }, { name: 'Jeffrick' }],
   },
   integrations: { webhook_url: '', csv_export: true },
 };

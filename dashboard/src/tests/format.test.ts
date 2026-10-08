@@ -1,7 +1,7 @@
 // Libellés et niveaux affichés à l'opérateur.
 import { describe, expect, it } from 'vitest';
 import { factorValue } from '../components/FactorBars';
-import { ALERT_TYPE, deviceLed, fmtAgo, fmtDuration, scoreLevel, severityLevel } from '../format';
+import { ALERT_TYPE, deviceLed, fmtAgo, fmtDuration, personLabel, scoreLevel, severityLevel } from '../format';
 import type { AlertType, Telemetry } from '../types';
 
 describe('libellés', () => {
@@ -37,5 +37,17 @@ describe('niveaux', () => {
     expect(deviceLed(t, undefined, 1001).label).toBe('Alarme');
     expect(deviceLed(t, undefined, 1100).label).toBe('Hors ligne');                // plus de mesure depuis 100 s
     expect(deviceLed(t, { device_id: 'esp-01', status: 'offline', ts: 1000 }, 1001).label).toBe('Hors ligne');
+  });
+});
+
+describe('personnes vues par la caméra', () => {
+  const base = { track_id: 1, in_zone: true, dwell_s: 4, badge: null, authorized: false };
+  it('nomme un visage reconnu et dit s’il est autorisé', () => {
+    expect(personLabel({ ...base, face: 'Michel', authorized: true })).toBe('Michel · visage reconnu');
+    expect(personLabel({ ...base, face: 'Michel' })).toBe('Michel · visage non autorisé');
+  });
+  it('retombe sur le badge, puis sur inconnu', () => {
+    expect(personLabel({ ...base, badge: 7, authorized: true })).toBe('Badge 7 autorisé');
+    expect(personLabel(base)).toBe('Inconnu (ni badge ni visage)');
   });
 });

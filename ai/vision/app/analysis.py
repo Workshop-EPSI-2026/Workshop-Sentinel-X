@@ -145,6 +145,8 @@ class Track:
     zone_since: float | None = None
     badge: int | None = None
     badge_seen: float | None = None
+    face: str | None = None              # nom confirmé par la reconnaissance des visages (galerie locale)
+    face_score: float | None = None
     path: deque = field(default_factory=lambda: deque(maxlen=30))
 
     def dwell(self, t: float) -> float:

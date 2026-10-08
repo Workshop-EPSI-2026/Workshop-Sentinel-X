@@ -326,8 +326,12 @@ class SentinelBrain:
         cam.persons = []
         for p in m.get("persons", []) or []:
             ok, badge, off = self.policy.check_badge(p.get("badge"), t)
+            face = p.get("face") if isinstance(p.get("face"), str) else None
+            f_ok, f_rule, f_off = self.policy.check_face(face, t)
+            if not ok and (f_ok or (f_rule and not badge)):          # visage autorisé, ou seul identifiant connu
+                ok, badge, off = f_ok, f_rule, f_off
             cam.persons.append(Person(int(p.get("track_id", -1)), bool(p.get("in_zone")), float(p.get("dwell_s", 0)),
-                                      p.get("badge"), ok, off, badge.name if badge else None))
+                                      p.get("badge"), ok, off and not ok, badge.name if badge else None, face))
         if any(p.in_zone for p in cam.persons):
             cam.last_person_rx = rx_ts
         out = self._camera_incidents(cam_id, cam, rx_ts)
@@ -344,7 +348,7 @@ class SentinelBrain:
         names = ", ".join(sorted({p.name for p in agents if p.name})) or "un agent"
         if intruders:
             n = len(intruders)
-            who = f"{n} personne{'s' if n > 1 else ''} sans badge autorisé"
+            who = f"{n} personne{'s' if n > 1 else ''} sans badge ni visage autorisé"
             fac = [("persons_unauthorized", n, 70.0)]
             if agents:
                 out["intrusion_suspected"] = ("warning", f"{who} dans la zone, accompagnée{'s' if n > 1 else ''} "
@@ -368,11 +372,17 @@ class SentinelBrain:
         elif late:
             p = late[0]
             b = pol.badges.get(int(p.badge)) if p.badge is not None else None
-            out["presence_to_verify"] = ("warning", f"Badge valide de {p.name} mais hors de ses horaires "
-                                         f"({b.hours_txt if b else '?'})", [("badge", p.badge, 50.0)])
+            how = "Badge valide" if b is not None and b.name == p.name else "Visage reconnu"
+            if b is None and p.face:
+                b = pol.faces.get(p.face)
+            out["presence_to_verify"] = ("warning", f"{how} de {p.name} mais hors de ses horaires "
+                                         f"({b.hours_txt if b else '?'})",
+                                         [("badge", p.badge, 50.0)] if p.badge is not None else [("face", p.face, 50.0)])
         elif agents:
-            out["presence_authorized"] = ("info", f"{names} dans la zone, badge reconnu, horaires respectés",
-                                          [("badge", agents[0].badge, 10.0)])
+            a0 = agents[0]
+            how = "badge reconnu" if a0.badge is not None and pol.badges.get(int(a0.badge)) else "visage reconnu"
+            out["presence_authorized"] = ("info", f"{names} dans la zone, {how}, horaires respectés",
+                                          [("badge", a0.badge, 10.0)] if how == "badge reconnu" else [("face", a0.face, 10.0)])
         if cam.online and cam.masked:
             since = rx_ts - (cam.masked_since or rx_ts)
             out["sabotage"] = ("critical", f"Caméra masquée : image uniforme depuis {since:.0f} s",

@@ -20,6 +20,7 @@ import uvicorn
 
 from .config import VisionSettings
 from .detector import YoloPersonDetector
+from .faces import load_identifier
 from .pipeline import VisionPipeline
 from .service import Frames, Publisher, make_app, run_loop
 
@@ -59,7 +60,8 @@ def main(argv=None) -> None:
              s.imgsz, s.zone)
 
     detector = YoloPersonDetector(s.model_path, s.imgsz, s.confidence)
-    pipeline = VisionPipeline(s, detector)
+    faces = load_identifier(s.models_dir, s.face_gallery_path, s.face_threshold) if s.face_recognition else None
+    pipeline = VisionPipeline(s, detector, faces)
     publisher = Publisher(s)
     publisher.connect()
     frames = Frames()
