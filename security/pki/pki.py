@@ -3,19 +3,23 @@
 
     python security/pki/pki.py              # crée ce qui manque dans security/certs (ne remplace rien)
     python security/pki/pki.py --refaire    # nouvelle CA et nouveaux certificats (les anciens ne marchent plus)
+    python security/pki/pki.py --ip 10.68.118.203   # serveur joint par une autre adresse (partage de connexion
+                                                    # d'un téléphone...) : refait SEULEMENT le certificat du serveur,
+                                                    # la CA reste la même, le boîtier n'a rien à changer
 
 Produit dans security/certs/ :
   ca.crt / ca.key            autorité locale (ca.key ensuite sur une clé USB, pas sur le PC serveur)
   server.crt / server.key    Mosquitto (8883, 8884) et nginx (443) ; SAN : 192.168.137.1, 127.0.0.1, localhost,
                              sentinel-pc, mosquitto, host.docker.internal
   <client>.crt / .key        certificats clients (TLS mutuel), CN = compte MQTT : esp-01, vision, notify, monitor
-et firmware/sentinel_esp/certs.h (CA, certificat et clé d'esp-01) pour le sketch Arduino.
+et certs.h (CA, certificat et clé d'esp-01) dans chaque sketch de firmware/ (sentinel_esp, sentinel_lisa).
 
 Utilise openssl : celui du système, ou celui fourni avec Git pour Windows.
 """
 from __future__ import annotations
 
 import argparse
+import ipaddress
 import os
 import shutil
 import subprocess
@@ -49,6 +53,17 @@ def key(openssl: str, path: Path) -> None:
     run(openssl, "ecparam", "-name", "prime256v1", "-genkey", "-noout", "-out", str(path))
 
 
+def server_ips() -> list[str]:
+    """Adresses IP présentes dans le certificat actuel du serveur."""
+    crt = CERTS / "server.crt"
+    if not crt.exists():
+        return []
+    p = subprocess.run([find_openssl(), "x509", "-in", str(crt), "-noout", "-ext", "subjectAltName"],
+                       capture_output=True, text=True)
+    return [x.split(":", 1)[1].strip() for x in p.stdout.replace("\n", ",").split(",")
+            if x.strip().startswith("IP Address:")]
+
+
 def sign(openssl: str, name: str, subject: str, ext: str) -> None:
     k, csr, crt = CERTS / f"{name}.key", CERTS / f"{name}.csr", CERTS / f"{name}.crt"
     key(openssl, k)
@@ -79,13 +94,30 @@ def main(argv: list[str] | None = None) -> int:
         pass
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--refaire", action="store_true", help="recrée la CA et tous les certificats")
+    ap.add_argument("--ip", action="append", default=[], metavar="ADRESSE",
+                    help="adresse IP supplémentaire du serveur (répétable) ; refait seulement server.crt")
     a = ap.parse_args(argv)
+    for ip in a.ip:
+        try:
+            ipaddress.ip_address(ip)
+        except ValueError:
+            sys.exit(f"adresse IP invalide : {ip}")
     openssl = find_openssl()
     CERTS.mkdir(parents=True, exist_ok=True)
     if a.refaire:
         for f in CERTS.glob("*"):
             if f.suffix in (".crt", ".key", ".srl"):
                 f.unlink()
+
+    extra = [ip for ip in a.ip if ip not in SAN]
+    if extra and (CERTS / "server.crt").exists():
+        extra = sorted(set(extra) | (set(server_ips()) - {"192.168.137.1", "127.0.0.1"}))
+        if not (CERTS / "ca.key").exists():
+            sys.exit("ca.key absente (rangée sur la clé USB ?) : la remettre dans security/certs pour signer le "
+                     "nouveau certificat du serveur, puis la retirer.")
+        (CERTS / "server.crt").unlink()
+        (CERTS / "server.key").unlink(missing_ok=True)
+    san = SAN + "".join(f",IP:{ip}" for ip in extra)
 
     made = []
     if not (CERTS / "ca.crt").exists():
@@ -103,8 +135,8 @@ def main(argv: list[str] | None = None) -> int:
     if not (CERTS / "server.crt").exists():
         sign(openssl, "server", "/O=Sentinel-X/CN=sentinel-pc",
              "basicConstraints=CA:FALSE\nkeyUsage=critical,digitalSignature,keyAgreement\n"
-             f"extendedKeyUsage=serverAuth\nsubjectAltName={SAN}\n")
-        made.append("server")
+             f"extendedKeyUsage=serverAuth\nsubjectAltName={san}\n")
+        made.append("server (" + ", ".join(["192.168.137.1", *extra]) + ")")
     for cn in CLIENTS:
         if not (CERTS / f"{cn}.crt").exists():
             sign(openssl, cn, f"/O=Sentinel-X/CN={cn}",
@@ -112,12 +144,15 @@ def main(argv: list[str] | None = None) -> int:
             made.append(cn)
     (CERTS / "ca.srl").unlink(missing_ok=True)
 
-    target = ROOT / "firmware" / "sentinel_esp" / "certs.h"
-    if (CERTS / "esp-01.key").exists() and (made or not target.exists()):
-        target.write_text(certs_h(), encoding="ascii", newline="\n")
-        made.append("firmware/sentinel_esp/certs.h")
+    for sketch in ("sentinel_esp", "sentinel_lisa"):
+        target = ROOT / "firmware" / sketch / "certs.h"
+        if target.parent.is_dir() and (CERTS / "esp-01.key").exists() and (made or not target.exists()):
+            target.write_text(certs_h(), encoding="ascii", newline="\n")
+            made.append(f"firmware/{sketch}/certs.h")
 
     print(("[OK] créés : " + ", ".join(made)) if made else "[OK] PKI déjà en place (--refaire pour tout recréer)")
+    if any(m.startswith("server") for m in made) and not a.refaire:
+        print("     Nouveau certificat du serveur : docker restart snx-mosquitto snx-nginx")
     print("     security/certs/ et certs.h ne sont jamais commités. Ranger ca.key sur une clé USB après usage.")
     print("     Navigateur sans avertissement : importer security\\certs\\ca.crt dans « Autorités de certification "
           "racines de confiance » (certmgr.msc).")
